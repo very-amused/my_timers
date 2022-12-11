@@ -22,7 +22,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 	// Connect to DB
 	let opts = config.db.mysql_opts();
-	let pool = mysql::Pool::new(opts)?;
+	let pool = mysql::Pool::new(opts).or_else(|err| {
+		eprintln!("Failed to connect to DB: {}", err);
+		Err(err)
+	})?;
 	pool.get_conn()?;
 	println!("Connected to database {}", config.db.pretty_name());
 

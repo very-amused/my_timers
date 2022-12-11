@@ -31,7 +31,7 @@ impl Config {
 		builder = if self.protocol == "SOCKET" {
 			builder.socket(Some(&self.address))
 		} else {
-			builder.ip_or_hostname(Some(&self.address))
+			builder.ip_or_hostname(Some(&self.address)).prefer_socket(false)
 		};
 		// Configure TLS
 		if self.tls {
@@ -44,9 +44,9 @@ impl Config {
 	pub fn pretty_name(&self) -> String {
 		// Format here is inspired by mysql DSNs
 		if self.protocol == "SOCKET" {
-			format!("unix/{}", self.database)
+			format!("{} via unix socket", self.database)
 		} else {
-			format!("{}({})/{}?tls={}", self.protocol, self.address, self.database, self.tls)
+			format!("{}/{} via {} (tls {})", self.address, self.database, self.protocol, if self.tls { "enabled" } else { "disabled" })
 		}
 	}
 
