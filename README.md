@@ -1,2 +1,2 @@
 # my_timers
-My Threaded, Information Multiplexing Event Runner for SQL.
+### My ***T***hreaded, ***I***nformation ***M***ultiplexing ***E***vent ***R***unner for ***S***QL
