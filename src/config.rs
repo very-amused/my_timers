@@ -1,12 +1,13 @@
 use std::{fs::File, error::Error};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct Config {
 	// Name of the my_timers process (i.e CSplan, CSplan_Staging)
 	pub name: String,
 	// Config for connecting to the MariaDB/MySQL database
-	pub db: crate::db::Config
+	pub db: crate::db::Config,
+	pub log: crate::logging::Config
 }
 
 impl Config {

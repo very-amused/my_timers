@@ -1,7 +1,9 @@
 use std::{env, error::Error};
+use tracing_subscriber::prelude::*;
 
 mod config;
 mod db;
+mod logging;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -28,6 +30,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	})?;
 	pool.get_conn()?;
 	println!("Connected to database {}", config.db.pretty_name());
+
+	// Prepare logging destinations (subscribers)
+	let file_guarded = match config.log.file {
+		Some(f) => f.layer(),
+		None => None
+	};
+	let (file_log, _guard) = if let Some(f) = file_guarded { 
+		(Some(f.0), Some(f.1))
+	} else { 
+		(None, None)
+	};
+	let sub = tracing_subscriber::FmtSubscriber::new()
+		.with(file_log);
 
 	Ok(())
 }

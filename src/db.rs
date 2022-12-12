@@ -1,7 +1,7 @@
 use mysql;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct Config {
 	user: String,
 	#[serde(default)]
@@ -14,7 +14,7 @@ pub struct Config {
 	#[serde(default = "Config::default_address")]
 	address: String,
 
-	database: String,
+	pub database: String,
 
 	#[serde(default = "Config::default_tls")]
 	tls: bool
