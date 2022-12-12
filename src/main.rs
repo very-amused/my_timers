@@ -5,6 +5,7 @@ mod config;
 mod db;
 mod logging;
 mod time_format;
+mod events;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -38,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		let span = span!(Level::DEBUG, "Checking database connection");
 		let _guard = span.enter();
 		pool.get_conn()?;
-		event!(Level::DEBUG, "Connected to database {}", config.db.pretty_name());
+		event!(Level::DEBUG, target=config.db.database, "Connected to database {}", config.db.pretty_name());
 	}
 
 
