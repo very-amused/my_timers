@@ -1,7 +1,7 @@
-mod parsing;
-pub use parsing::*;
-mod error;
+pub mod parsing;
+pub mod error;
 
+#[derive(Debug)]
 pub struct CronInterval {
 	minute: CronValue,
 	hour: CronValue,

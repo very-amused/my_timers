@@ -59,7 +59,7 @@ impl FromStr for CronInterval {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		// To start parsing off simple, it's good to make sure the right amount of cron values are present
 		const CRON_LEN: usize = 5;
-		let mut values: VecDeque<&str> = s.splitn(CRON_LEN, ' ').collect();
+		let mut values: VecDeque<&str> = s.splitn(CRON_LEN + 1, ' ').collect();
 		if values.len() < CRON_LEN {
 			return Err(Self::Err::SyntaxError(
 				format!("{} - unexpected number of cron values (expected {}, received {})", s, CRON_LEN, values.len())

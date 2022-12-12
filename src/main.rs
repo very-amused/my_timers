@@ -15,8 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		const ENV: &str = "MY_TIMERS_CONFIG";
 		const DEFAULT: &str = "config.json";
 		env::var(ENV).or_else(|err| {
-			eprintln!("Failed to get config path from {}: {}", ENV, err);
-			eprintln!("Falling back to {}", DEFAULT);
+			eprintln!("{} is not set, using {}", ENV, DEFAULT);
 			Err(err)
 		}).unwrap_or(DEFAULT.into())
 	};
@@ -42,6 +41,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		pool.get_conn()?;
 		event!(Level::DEBUG, target=config.db.database, "Connected to database {}", config.db.pretty_name());
 	}
+
+	// Read events from config
+	let config_path = {
+		const ENV: &str = "MY_TIMERS_EVENTS";
+		const DEFAULT: &str = "events.conf";
+		env::var(ENV).or_else(|err| {
+			eprintln!("{} is not set, using {}", ENV, DEFAULT);
+			Err(err)
+		}).unwrap_or(DEFAULT.into())
+	};
+	let events = {
+		let span = span!(Level::DEBUG, "Parsing events");
+		let _guard = span.enter();
+		let events = events::parse(&config_path)?;
+		event!(Level::DEBUG, "Done");
+		events
+	};
+	event!(Level::DEBUG, "{:#?}", events);
 
 
 	Ok(())

@@ -1,38 +1,56 @@
-use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque};
+use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque, fmt::Display};
 
-use crate::cron;
+use crate::cron::{self, error::CronParseError};
+
+
+#[derive(Debug)]
+pub enum EventParseError {
+	CronParseError(CronParseError),
+	SyntaxError(String)
+}
+
+impl Display for EventParseError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::CronParseError(e) => e.fmt(f),
+			Self::SyntaxError(e) => write!(f, "Invalid event syntax: {}", e)
+		}
+	}
+}
+
+impl Error for EventParseError {}
 
 // A database event
+#[derive(Debug)]
 pub struct Event {
 	label: String,
 	interval: cron::CronInterval,
 	body: Vec<mysql::Statement>
 }
 
-fn parse_event(evt_parts: &mut VecDeque<String>) -> Option<Event> {
-	todo!();
-	let mut evt = Event::default(); 
-	// Label
-	match evt_parts.pop_front() {
-		Some(label) => evt.label = label,
-		None => return None
+impl Event {
+	fn parse(evt_parts: &mut VecDeque<String>) -> Result<Event, EventParseError> {
+		if evt_parts.len() != 3 {
+			return Err(EventParseError::SyntaxError(format!("{} unexpected number of event tokens (expected {}, received {})",
+				evt_parts.get(1).unwrap_or(&"".into()), 3, evt_parts.len())));
+		}
+		let evt = Event {
+			label: evt_parts.pop_front().unwrap(),
+			interval: evt_parts.pop_front().unwrap().trim().parse()
+				.map_err(EventParseError::CronParseError)?,
+			body: vec![] // TODO
+		};
+		evt_parts.clear(); // Ensure the event parsing queue is empty
+		Ok(evt)
 	}
-	// Interval
-	match evt_parts.pop_front() {
-		Some(interval) => {
-			todo!()
-		},
-		None => return None
-	}
-	
-
-	Some(evt)
 }
 
-pub fn parse_events(path: &str) -> Result<Vec<Event>, Box<dyn Error>> {
+pub fn parse(path: &str) -> Result<Vec<Event>, Box<dyn Error>> {
 	// Open file reader
 	let file = File::open(path)?;
 	let reader = BufReader::new(file);
+
+	let mut events: Vec<Event> = Vec::new();
 
 	// Iterate over lines
 	let mut evt_parts: VecDeque<String> = VecDeque::with_capacity(3);
@@ -73,17 +91,15 @@ pub fn parse_events(path: &str) -> Result<Vec<Event>, Box<dyn Error>> {
 					evt_parts[2].push_str(&l);
 				} else {
 					// Parse event
-					let evt = parse_event(&mut evt_parts);
+					events.push(Event::parse(&mut evt_parts)?);
 				}
 			},
 			_ => panic!("event parsing dequeue exceeded max size of 3")
 		};
 	}
-
-
-	let mut events: Vec<Event> = Vec::new();
-
-	
-
-	todo!()
+	// If there is no terminating newline, the last event still needs to be pushed
+	if evt_parts.len() == 3 {
+		events.push(Event::parse(&mut evt_parts)?);
+	}
+	Ok(events)
 }
