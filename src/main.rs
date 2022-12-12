@@ -1,5 +1,5 @@
 use std::{env, error::Error};
-use tracing::{event, Level};
+use tracing::{event, Level, span};
 
 mod config;
 mod db;
@@ -23,20 +23,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		Err(err)
 	})?;
 
+
+	// Initialize logging destinations
+	let _guard = config.log.init();
+	event!(Level::INFO, "my_timers started");
+
 	// Connect to DB
 	let opts = config.db.mysql_opts();
 	let pool = mysql::Pool::new(opts).or_else(|err| {
-		eprintln!("Failed to connect to DB: {}", err);
+		event!(Level::ERROR, "Failed to connect to DB: {}", err);
 		Err(err)
 	})?;
-	pool.get_conn()?;
-	println!("Connected to database {}", config.db.pretty_name());
+	{
+		let span = span!(Level::DEBUG, "Checking database connection");
+		let _guard = span.enter();
+		pool.get_conn()?;
+		event!(Level::DEBUG, "Connected to database {}", config.db.pretty_name());
+	}
 
-	// Prepare logging destinations (subscribers)
-	let _guard = config.log.init();
-
-	// Test log message
-	event!(Level::INFO, "my_timers daemon has started");
 
 	Ok(())
 }

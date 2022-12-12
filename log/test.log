@@ -9,3 +9,8 @@
 [2m12 Dec 2022 02:57:40.763[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m my_timers daemon has started
 [2m12 Dec 2022 03:08:48.920[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m my_timers daemon has started
 [2m12 Dec 2022 03:48:03.700[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m my_timers daemon has started
+[2m12 Dec 2022 03:49:28.329[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m my_timers daemon has started
+[2m12 Dec 2022 03:52:56.242[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m my_timers started
+[2m12 Dec 2022 03:52:56.248[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m Connected to database CSplan via unix socket
+[2m12 Dec 2022 04:01:30.174[0m [32m INFO[0m [2mmy_timers[0m[2m:[0m my_timers started
+[2m12 Dec 2022 04:01:30.183[0m [34mDEBUG[0m [1mChecking database connection[0m[2m:[0m [2mmy_timers[0m[2m:[0m Connected to database CSplan via unix socket
