@@ -1,7 +1,4 @@
-use std::{str::{FromStr, Split}, error::Error, num::ParseIntError, fmt::{Display, self}};
-
-use lazy_static::lazy_static;
-use regex::Regex;
+use std::{str::FromStr, error::Error, num::ParseIntError, fmt::Display, collections::VecDeque};
 
 pub struct CronInterval {
 	minute: CronValue,
@@ -13,7 +10,7 @@ pub struct CronInterval {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct CronRange (u32, u32);
+pub struct CronRange (u32, u32);
 impl CronRange {
 	fn validate(&self, v: &CronValue) -> Result<(), CronParseError> {
 		// Use closure for validating against range values
@@ -42,8 +39,6 @@ impl CronRange {
 }
 
 impl CronInterval {
-	// Validation
-
 	const fn minute_range() -> CronRange {
 		CronRange(0, 59)
 	}
@@ -67,15 +62,32 @@ impl FromStr for CronInterval {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		// To start parsing off simple, it's good to make sure the right amount of cron values are present
 		const CRON_LEN: usize = 5;
-		let values: Vec<&str> = s.splitn(CRON_LEN, ' ').collect();
-		if values.len() != CRON_LEN {
+		let mut values: VecDeque<&str> = s.splitn(CRON_LEN, ' ').collect();
+		if values.len() < CRON_LEN {
 			return Err(Self::Err::SyntaxError(
 				format!("{} - unexpected number of cron values (expected {}, received {})", s, CRON_LEN, values.len())
 			));
 		}
 		// Next, parse and validate each value according to its expected range
-
-		todo!()
+		macro_rules! next {
+			($range:path) => {
+				{
+					let v: CronValue = values.pop_front().unwrap().parse()?;
+					$range().validate(&v)?;
+					v
+				}
+			};
+		}
+		let interval = CronInterval { // Each value is moved to the interval struct
+			minute: next!(Self::minute_range),
+			hour: next!(Self::hour_range),
+			day: next!(Self::day_range),
+			month: next!(Self::month_range),
+			weekday: next!(Self::weekday_range),
+			// Check for an @startup tag at the end
+			startup: if let Some("@startup") = values.pop_front() { true } else { false }
+		};
+		Ok(interval)
 	}
 }
 
