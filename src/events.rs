@@ -1,14 +1,16 @@
 use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque};
 
+use crate::cron;
+
 // A database event
-#[derive(Default)]
 pub struct Event {
 	label: String,
-	interval: std::time::Duration,
+	interval: cron::CronInterval,
 	body: Vec<mysql::Statement>
 }
 
 fn parse_event(evt_parts: &mut VecDeque<String>) -> Option<Event> {
+	todo!();
 	let mut evt = Event::default(); 
 	// Label
 	match evt_parts.pop_front() {
