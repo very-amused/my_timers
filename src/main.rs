@@ -6,6 +6,7 @@ mod db;
 mod logging;
 mod time_format;
 mod events;
+mod cron;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
