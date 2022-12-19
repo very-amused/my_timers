@@ -1,19 +1,24 @@
 use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque, fmt::Display};
 
+use mysql_async;
+use mysql_async::prelude::*;
+
 use crate::cron::{self, error::CronParseError};
 
 
 #[derive(Debug)]
 pub enum EventParseError {
 	CronParseError(CronParseError),
-	SyntaxError(String)
+	SyntaxError(String),
+	SQLError(mysql_async::Error)
 }
 
 impl Display for EventParseError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::CronParseError(e) => e.fmt(f),
-			Self::SyntaxError(e) => write!(f, "Invalid event syntax: {}", e)
+			Self::SyntaxError(e) => write!(f, "Invalid event syntax: {}", e),
+			Self::SQLError(e) => e.fmt(f)
 		}
 	}
 }
@@ -25,27 +30,40 @@ impl Error for EventParseError {}
 pub struct Event {
 	label: String,
 	interval: cron::CronInterval,
-	body: Vec<mysql::Statement>
+	body: Vec<String> // Each stmt in an event body is validated as an SQL stmt during initial parsing
 }
 
 impl Event {
-	fn parse(evt_parts: &mut VecDeque<String>) -> Result<Event, EventParseError> {
+	async fn parse(evt_parts: &mut VecDeque<String>, pool: mysql_async::Pool) -> Result<Event, EventParseError> {
 		if evt_parts.len() != 3 {
 			return Err(EventParseError::SyntaxError(format!("{} unexpected number of event tokens (expected {}, received {})",
 				evt_parts.get(1).unwrap_or(&"".into()), 3, evt_parts.len())));
 		}
-		let evt = Event {
+		// Parse label and interval
+		let mut evt = Event {
 			label: evt_parts.pop_front().unwrap(),
 			interval: evt_parts.pop_front().unwrap().trim().parse()
 				.map_err(EventParseError::CronParseError)?,
-			body: vec![] // TODO
+			body: vec![]
 		};
+
+		// Parse SQL body
+		let body = evt_parts.pop_front().unwrap();
+		let stmts = body.split(';').filter(|s| s.len() > 0);
+		let mut conn = pool.get_conn().await
+			.map_err(EventParseError::SQLError)?;
+		for stmt in stmts { // Validate SQL stmts
+			conn.prep(stmt).await
+				.map_err(EventParseError::SQLError)?;
+			evt.body.push(stmt.into());
+		}
+
 		evt_parts.clear(); // Ensure the event parsing queue is empty
 		Ok(evt)
 	}
 }
 
-pub fn parse(path: &str) -> Result<Vec<Event>, Box<dyn Error>> {
+pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Event>, Box<dyn Error>> {
 	// Open file reader
 	let file = File::open(path)?;
 	let reader = BufReader::new(file);
@@ -91,7 +109,7 @@ pub fn parse(path: &str) -> Result<Vec<Event>, Box<dyn Error>> {
 					evt_parts[2].push_str(&l);
 				} else {
 					// Parse event
-					events.push(Event::parse(&mut evt_parts)?);
+					events.push(Event::parse(&mut evt_parts, pool.clone()).await?);
 				}
 			},
 			_ => panic!("event parsing dequeue exceeded max size of 3")
@@ -99,7 +117,7 @@ pub fn parse(path: &str) -> Result<Vec<Event>, Box<dyn Error>> {
 	}
 	// If there is no terminating newline, the last event still needs to be pushed
 	if evt_parts.len() == 3 {
-		events.push(Event::parse(&mut evt_parts)?);
+		events.push(Event::parse(&mut evt_parts, pool.clone()).await?);
 	}
 	Ok(events)
 }

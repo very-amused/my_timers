@@ -1,5 +1,5 @@
-use mysql;
-use serde::{Deserialize};
+use mysql_async;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -21,9 +21,9 @@ pub struct Config {
 }
 
 impl Config {
-	pub fn mysql_opts(&self) -> mysql::Opts {
+	pub fn mysql_opts(&self) -> mysql_async::Opts {
 		// Configure user, password, db
-		let mut builder = mysql::OptsBuilder::new()
+		let mut builder = mysql_async::OptsBuilder::default()
 			.user(Some(&self.user))
 			.pass(Some(&self.password))
 			.db_name(Some(&self.database));
@@ -31,11 +31,11 @@ impl Config {
 		builder = if self.protocol == "SOCKET" {
 			builder.socket(Some(&self.address))
 		} else {
-			builder.ip_or_hostname(Some(&self.address)).prefer_socket(false)
+			builder.ip_or_hostname(&self.address).prefer_socket(false)
 		};
 		// Configure TLS
 		if self.tls {
-			builder = builder.ssl_opts(mysql::SslOpts::default());
+			builder = builder.ssl_opts(mysql_async::SslOpts::default());
 		}
 		builder.into()
 	}

@@ -82,7 +82,7 @@ impl FromStr for CronInterval {
 			month: next!(Self::month_range),
 			weekday: next!(Self::weekday_range),
 			// Check for an @startup tag at the end
-			startup: if let Some("@startup") = values.pop_front() { true } else { false }
+			startup: values.pop_front() == Some("@startup")
 		};
 		Ok(interval)
 	}

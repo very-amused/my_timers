@@ -31,14 +31,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 	// Connect to DB
 	let opts = config.db.mysql_opts();
-	let pool = mysql::Pool::new(opts).or_else(|err| {
-		event!(Level::ERROR, "Failed to connect to DB: {}", err);
-		Err(err)
-	})?;
+	let pool = mysql_async::Pool::new(opts);
 	{
 		let span = span!(Level::DEBUG, "Checking database connection");
 		let _guard = span.enter();
-		pool.get_conn()?;
+		pool.get_conn().await?;
 		event!(Level::DEBUG, target=config.db.database, "Connected to database {}", config.db.pretty_name());
 	}
 
@@ -54,11 +51,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	let events = {
 		let span = span!(Level::DEBUG, "Parsing events");
 		let _guard = span.enter();
-		let events = events::parse(&config_path)?;
+		let events = events::parse(&config_path, pool.clone()).await?;
 		event!(Level::DEBUG, "Done");
 		events
 	};
-	event!(Level::DEBUG, "{:#?}", events);
+	event!(Level::TRACE, "{:#?}", events);
 
 
 	Ok(())
