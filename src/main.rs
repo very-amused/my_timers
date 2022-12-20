@@ -1,20 +1,19 @@
 use std::{env, error::Error, time::Duration};
 use chrono::{Timelike, Local};
 use tokio::{time::{self, sleep}, task::JoinSet};
-use tracing::{event, Level, span};
+use tracing::{event, Level, span, Instrument};
 
 mod config;
 mod db;
 mod logging;
-mod time_format;
 mod events;
 mod cron;
 
 fn to_next_minute() -> Duration {
-	let mut now = chrono::Local::now();
-	if now.nanosecond() > 0 { // Round up to nearest ms
-		now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 1_000_000).unwrap();
-	}
+	let mut now = chrono::Utc::now();
+	// Ceil to nearest ms + 1
+	// TODO: explain timing of event loop start
+	now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 2_000_000).unwrap();
 	let mut next = now.clone();
 	next = if next.minute() == 59 {
 		next.with_hour(next.hour()+1).unwrap()
@@ -52,10 +51,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	let opts = config.db.mysql_opts();
 	let pool = mysql_async::Pool::new(opts);
 	{
-		let span = span!(Level::DEBUG, "Checking database connection");
-		let _guard = span.enter();
-		pool.get_conn().await?;
-		event!(Level::DEBUG, target=config.db.database, "Connected to database {}", config.db.pretty_name());
+		let span = span!(Level::DEBUG, "Connecting to DB");
+		async {
+			event!(Level::DEBUG, "Connecting to database {}", config.db.pretty_name());
+			pool.get_conn().await?;
+			event!(Level::DEBUG, "Connected");
+			Ok::<(), mysql_async::Error>(())
+		}.instrument(span).await?;
 	}
 
 	// Read events from config
@@ -67,29 +69,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 			Err(err)
 		}).unwrap_or(DEFAULT.into())
 	};
-	let events = {
-		let span = span!(Level::DEBUG, "Parsing events");
-		let _guard = span.enter();
-		let events = events::parse(&config_path, pool.clone()).await?;
-		event!(Level::DEBUG, "Done");
-		events
-	};
-	for evt in &events {
-		event!(Level::TRACE, "Loaded event: {}", evt);
-	}
+	let events = events::parse(&config_path, pool.clone()).await?;
 
 	// Initialize task joinset
 	let mut set = JoinSet::<()>::new();
 	// Timer thread (runs matching events every minute at xx:00)
-	{
-		let span = span!(Level::DEBUG, "Starting event loop");
-		let _guard = span.enter();
-		event!(Level::DEBUG, "Starting event loop in {:?}", to_next_minute());
-		sleep(to_next_minute()).await;
-		event!(Level::DEBUG, "Starting event loop");
-	}
-	// Start minute interval ticker
+	event!(Level::DEBUG, "Starting event loop in {:?}", to_next_minute());
+	sleep(to_next_minute()).await;
+	event!(parent: None, Level::INFO, "Ready!");
 	let mut interval = time::interval(Duration::from_secs(60));
+	// Start minute interval ticker
 	loop {
 		interval.tick().await;
 		// Iterate through each event, run the ones that match
@@ -99,7 +88,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 				let pool = pool.clone();
 				let evt = evt.clone();
 				set.spawn(async move {
-					evt.run(pool).await;
+					// Error logging is handled in the event's tracing span
+					evt.run(pool).await.ok();
 				});	
 			}
 		}

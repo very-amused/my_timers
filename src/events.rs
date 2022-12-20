@@ -1,8 +1,8 @@
 use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque, fmt::Display, sync::Arc};
 
-use mysql_async;
+use mysql_async::{self, TxOpts};
 use mysql_async::prelude::*;
-use tracing::instrument;
+use tracing::{instrument, event, Level, span, Instrument};
 
 use crate::cron::{self, error::CronParseError};
 
@@ -63,9 +63,23 @@ impl Event {
 		Ok(Arc::new(evt))
 	}
 
-	#[instrument(skip(pool))]
-	pub async fn run(&self, pool: mysql_async::Pool) {
-		todo!()
+	#[instrument(skip_all, fields(event = %self), err)]
+	pub async fn run(&self, pool: mysql_async::Pool) -> Result<(), mysql_async::Error> {
+		// Start a transaction to run the event on
+		let mut conn = pool.get_conn().await?;
+		event!(Level::INFO, "Using conn {}", conn.id());
+		let mut tx = conn.start_transaction(TxOpts::default()).await?;
+
+		// Run the event body
+		for stmt in &self.body {
+			let span = span!(Level::TRACE, "Exec stmt");
+			async {
+				tx.exec_drop(stmt, params::Params::Empty).await
+			}.instrument(span).await?;
+		}
+
+		tx.commit().await?;
+		Ok(())
 	}
 }
 
@@ -75,7 +89,9 @@ impl Display for Event {
 	}
 }
 
+#[instrument(name = "Parsing events", level = "debug", skip(pool), err)]
 pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Arc<Event>>, Box<dyn Error>> {
+	event!(Level::DEBUG, "Parsing events");
 	// Open file reader
 	let file = File::open(path)?;
 	let reader = BufReader::new(file);
@@ -131,5 +147,16 @@ pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Arc<Event>
 	if evt_parts.len() == 3 {
 		events.push(Event::parse(&mut evt_parts, pool.clone()).await?);
 	}
+
+	{
+		// Displayable events
+		let mut d_events: Vec<String> = Vec::with_capacity(events.len());
+		for evt in &events {
+			let evt = evt.clone();
+			d_events.push(format!("{}", evt));
+		}
+		event!(Level::TRACE, "Loaded events:\n\t{}", d_events.join("\n\t"));
+	}
+	event!(Level::DEBUG, "Done");
 	Ok(events)
 }

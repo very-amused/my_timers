@@ -1,11 +1,12 @@
-use std::path::Path;
+use std::{path::Path, io::Write};
 
 use serde::Deserialize;
 use tracing_appender::{non_blocking, non_blocking::{WorkerGuard}, rolling};
 use tracing_subscriber::{Layer, registry, Registry};
 use tracing_subscriber::prelude::*;
 
-use crate::time_format;
+mod time_format;
+mod filter;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -21,6 +22,8 @@ impl Config {
 		};
 		registry()
 			.with(file_log)
+			// Filter logs
+			.with(filter::filter())
 			.init();
 		_guard
 	}
@@ -70,12 +73,19 @@ impl GuardedRegLayer for FileConfig {
 			None => return (None, None)
 		};
 
-		let file_appender = match self.rotation.as_str() {
+		let mut file_appender = match self.rotation.as_str() {
 			"diraily" => rolling::daily(dir, file),
 			"hourly" => rolling::hourly(dir, file),
 			"minutely" => rolling::minutely(dir, file),
 			_ => rolling::never(dir, file)
 		};
+		if cfg!(debug_assertions) {
+			// Clear screen for observers such as tail
+			const CLS: &str = "\x1b[H\x1b[J";
+			if let Err(e) = write!(&mut file_appender, "{}", CLS) {
+				eprintln!("Failed to clear logfile {}: {}", &self.path, e);
+			}
+		}
 		let (non_blocking, _guard) = non_blocking(file_appender);
 		let layer = tracing_subscriber::fmt::layer()
 			.with_writer(non_blocking)
