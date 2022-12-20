@@ -1,6 +1,6 @@
 use std::{env, error::Error, time::Duration};
 use chrono::{Timelike, Local};
-use tokio::{time::{self, sleep}, task::JoinSet, signal};
+use tokio::{time, task::JoinSet, signal};
 use tracing::{event, Level, span, Instrument, instrument};
 
 mod config;
@@ -67,15 +67,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 	// Initialize task joinset
 	let mut event_threads = JoinSet::<()>::new();
-	// Timer thread (runs matching events every minute at xx:00)
-	event!(Level::DEBUG, "Starting event loop in {:?}", to_next_minute());
-	tokio::select! {
-		_ = sleep(to_next_minute()) => {},
-		Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await
+
+	// Immediately run @startup events
+	event!(Level::INFO, "Running @startup events");
+	for evt in &events {
+		if evt.interval.startup {
+			let pool = pool.clone();
+			let evt = evt.clone();
+			event_threads.spawn(async move {
+				evt.run(pool).await.ok();
+			});
+		}
 	}
+
+	// Wait until next minute at 00 seconds to start event loop
+	let mut interval = {
+		let mut to_minute = time::interval(to_next_minute());
+		to_minute.tick().await;
+		event!(Level::DEBUG, "Starting event loop in {:?}", to_minute.period());
+		tokio::select! {
+			_ = to_minute.tick() => {
+				// Start minute interval ticker
+				time::interval(Duration::from_secs(60))
+			},
+			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await
+		}
+	};
 	event!(parent: None, Level::INFO, "Ready!");
-	// Start minute interval ticker
-	let mut interval = time::interval(Duration::from_secs(60));
 
 	// Event loop
 	loop {
@@ -100,11 +118,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn to_next_minute() -> Duration {
-	let mut now = chrono::Utc::now();
 	// Ceil to nearest ms + 1
-	// TODO: explain timing of event loop start
-	now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 2_000_000).unwrap();
-	let mut next = now.clone();
+	let mut next = chrono::Utc::now();
 	next = if next.minute() == 59 {
 		next.with_hour(next.hour()+1).unwrap()
 		.with_minute(0).unwrap()
@@ -113,6 +128,10 @@ fn to_next_minute() -> Duration {
 	};
 	next = next.with_second(0).unwrap()
 		.with_nanosecond(0).unwrap();
+
+	let mut now = chrono::Utc::now(); // Get duration against current time
+	// Round up to next ms
+	now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 1_000_000).unwrap();
 	(next - now).to_std().unwrap()
 }
 
