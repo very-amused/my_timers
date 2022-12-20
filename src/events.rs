@@ -1,7 +1,8 @@
-use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque, fmt::Display};
+use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque, fmt::Display, sync::Arc};
 
 use mysql_async;
 use mysql_async::prelude::*;
+use tracing::{span, Level, instrument};
 
 use crate::cron::{self, error::CronParseError};
 
@@ -28,13 +29,13 @@ impl Error for EventParseError {}
 // A database event
 #[derive(Debug)]
 pub struct Event {
-	label: String,
-	interval: cron::CronInterval,
+	pub label: String,
+	pub interval: cron::CronInterval,
 	body: Vec<String> // Each stmt in an event body is validated as an SQL stmt during initial parsing
 }
 
 impl Event {
-	async fn parse(evt_parts: &mut VecDeque<String>, pool: mysql_async::Pool) -> Result<Event, EventParseError> {
+	async fn parse(evt_parts: &mut VecDeque<String>, pool: mysql_async::Pool) -> Result<Arc<Event>, EventParseError> {
 		if evt_parts.len() != 3 {
 			return Err(EventParseError::SyntaxError(format!("{} unexpected number of event tokens (expected {}, received {})",
 				evt_parts.get(1).unwrap_or(&"".into()), 3, evt_parts.len())));
@@ -59,16 +60,21 @@ impl Event {
 		}
 
 		evt_parts.clear(); // Ensure the event parsing queue is empty
-		Ok(evt)
+		Ok(Arc::new(evt))
+	}
+
+	#[instrument(skip(pool))]
+	pub async fn run(&self, pool: mysql_async::Pool) {
+		todo!()
 	}
 }
 
-pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Event>, Box<dyn Error>> {
+pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Arc<Event>>, Box<dyn Error>> {
 	// Open file reader
 	let file = File::open(path)?;
 	let reader = BufReader::new(file);
 
-	let mut events: Vec<Event> = Vec::new();
+	let mut events: Vec<Arc<Event>> = Vec::new();
 
 	// Iterate over lines
 	let mut evt_parts: VecDeque<String> = VecDeque::with_capacity(3);
