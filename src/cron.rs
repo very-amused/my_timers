@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use chrono::{DateTime, Local, Timelike, Datelike};
 
 pub mod parsing;
@@ -32,6 +34,18 @@ impl CronInterval {
 	}
 }
 
+impl Display for CronInterval {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} {} {} {} {}{}",
+		self.minute,
+		self.hour,
+		self.day,
+		self.month,
+		self.weekday,
+		if self.startup { " @startup" } else { "" })
+	}
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum CronValue {
 	Every, // Most common cron value, parsed from an asterisk
@@ -48,6 +62,20 @@ impl CronValue {
 			Self::Value(n) => &value == n,
 			Self::Set(set) => set.binary_search(&value).is_ok(),
 			Self::Range((start, end)) => &value >= start && &value <= end
+		}
+	}
+}
+
+impl Display for CronValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Every => write!(f, "*"),
+			Self::Value(n) => n.fmt(f),
+			Self::Set(set) => {
+				let s: Vec<String> = set.iter().map(|n| n.to_string()).collect();
+				s.join(",").fmt(f)
+			},
+			Self::Range((start, end)) => write!(f, "{}-{}", start, end)
 		}
 	}
 }

@@ -1,7 +1,6 @@
-use std::{env, error::Error, time::Duration, sync::Arc};
+use std::{env, error::Error, time::Duration};
 use chrono::{Timelike, Local};
-use ::time::Instant;
-use tokio::{time::{self, sleep_until, sleep}, task::{self, JoinSet}};
+use tokio::{time::{self, sleep}, task::JoinSet};
 use tracing::{event, Level, span};
 
 mod config;
@@ -75,7 +74,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		event!(Level::DEBUG, "Done");
 		events
 	};
-	//event!(Level::TRACE, "Loaded events: {:#?}", events);
+	for evt in &events {
+		event!(Level::TRACE, "Loaded event: {}", evt);
+	}
 
 	// Initialize task joinset
 	let mut set = JoinSet::<()>::new();

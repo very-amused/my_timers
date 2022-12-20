@@ -2,7 +2,7 @@ use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDequ
 
 use mysql_async;
 use mysql_async::prelude::*;
-use tracing::{span, Level, instrument};
+use tracing::instrument;
 
 use crate::cron::{self, error::CronParseError};
 
@@ -45,7 +45,7 @@ impl Event {
 			label: evt_parts.pop_front().unwrap(),
 			interval: evt_parts.pop_front().unwrap().trim().parse()
 				.map_err(EventParseError::CronParseError)?,
-			body: vec![]
+			body: Vec::new()
 		};
 
 		// Parse SQL body
@@ -66,6 +66,12 @@ impl Event {
 	#[instrument(skip(pool))]
 	pub async fn run(&self, pool: mysql_async::Pool) {
 		todo!()
+	}
+}
+
+impl Display for Event {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}: {}", self.label, self.interval)
 	}
 }
 
