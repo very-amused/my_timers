@@ -27,7 +27,7 @@ impl Display for EventParseError {
 
 impl Error for EventParseError {}
 
-// A database event
+/// A database event
 #[derive(Debug)]
 pub struct Event {
 	pub label: String,
@@ -64,6 +64,8 @@ impl Event {
 		Ok(Arc::new(evt))
 	}
 
+	/// Run an event's SQL body on a transaction,
+	/// only committing the results if all statements succeed
 	#[instrument(skip_all, fields(event = %self, interval = %self.interval), err)]
 	pub async fn run(&self, pool: mysql_async::Pool) -> Result<(), mysql_async::Error> {
 		// Start a transaction to run the event on
@@ -92,6 +94,8 @@ impl Event {
 		Ok(())
 	}
 
+	/// Parse an action summary of an SQL statement
+	/// i.e "UPDATE my_table, another_table", "DELETE FROM my_table", "INSERT INTO my_table"
 	fn action(stmt: &str) -> String {
 		// Tokens that end parsing (self-exclusive) of the "action" portion of various kinds of queries
 		lazy_static! {
@@ -115,7 +119,7 @@ impl Event {
 				end += 1;
 			}
 			_ => {}
-		};
+		}
 		tokens[0..end].join(" ")
 	}
 }
