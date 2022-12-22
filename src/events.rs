@@ -1,8 +1,9 @@
-use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::VecDeque, fmt::Display, sync::Arc};
+use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::{VecDeque, HashSet}, fmt::Display, sync::Arc};
 
 use mysql_async::{self, TxOpts};
 use mysql_async::prelude::*;
 use tracing::{instrument, event, Level, span, Instrument};
+use lazy_static::lazy_static;
 
 use crate::cron::{self, error::CronParseError};
 
@@ -92,14 +93,30 @@ impl Event {
 	}
 
 	fn action(stmt: &str) -> String {
-		let parts: Vec<&str> = stmt.trim().split(" ").collect();
-		match parts[0].to_uppercase().as_str() { // TODO: more robust parsing
-			"INSERT" if parts[1].to_ascii_uppercase() == "INTO" => parts[0..3].join(" "),
-			"INSERT" => parts[0..2].join(" "),
-			"UPDATE" => parts[0..2].join(" "),
-			"DELETE" => parts[0..3].join(" "),
-			_ => parts[0].to_string()
+		// Tokens that end parsing (self-exclusive) of the "action" portion of various kinds of queries
+		lazy_static! {
+			static ref END_INSERT: HashSet<&'static str> = HashSet::from(["PARTITION", "SELECT", "VALUES", "VALUE"]);
+			static ref END_UPDATE: HashSet<&'static str> = HashSet::from(["PARTITION", "FOR", "SET"]);
+			static ref END_DELETE: HashSet<&'static str> = HashSet::from(["PARTITION", "FOR", "WHERE", "ORDER", "LIMIT", "RETURNING", "BEFORE"]);
 		}
+		let tokens: Vec<&str> = stmt.trim().split(" ").collect();
+		let mut end = 2; // Exclusive end token index
+		match tokens[0].to_uppercase().as_str() {
+			"INSERT" => while end < tokens.len() && !(
+				END_INSERT.contains(tokens[end].to_ascii_uppercase().as_str()) ||
+				tokens[end].starts_with('('))
+			{
+				end += 1;
+			},
+			"UPDATE" => while end < tokens.len() && !END_UPDATE.contains(tokens[end].to_ascii_uppercase().as_str()) {
+				end += 1;
+			},
+			"DELETE" => while end < tokens.len() && !END_DELETE.contains(tokens[end].to_ascii_uppercase().as_str()) {
+				end += 1;
+			}
+			_ => {}
+		};
+		tokens[0..end].join(" ")
 	}
 }
 

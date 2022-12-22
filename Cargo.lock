@@ -902,6 +902,7 @@ name = "my_timers"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "lazy_static",
  "mysql_async",
  "serde",
  "serde_json",
