@@ -142,8 +142,12 @@ pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Arc<Event>
 	// Iterate over lines
 	let mut evt_parts: VecDeque<String> = VecDeque::with_capacity(3);
 	for l in reader.lines().map(|l| -> String {
-		l.unwrap_or("".into())
+		l.unwrap_or("".to_string())
 	}) {
+		// Discard comments
+		const COMMENT: &str = "#";
+		let l = l.splitn(2, COMMENT).nth(0).unwrap();
+
 		match evt_parts.len() {
 			0 => { // Label (maybe interval)
 				let mut l_parts: VecDeque<&str> = l.splitn(2, ':').collect();
