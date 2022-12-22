@@ -1,5 +1,5 @@
 # my_timers
-### My <u>T</u>hreaded, <u>I</u>nformation-<u>M</u>ultiplexing <u>E</u>vent <u>R</u>unner for <u>S</u>QL
+### My ***T***hreaded, ***I***nformation-***M***ultiplexing ***E***vent ***R***unner for ***S***QL
 
 my_timers is a multithreaded, async, MariaDB/MySQL event runner, built out of frustration
 with the verbose syntax and poor logging capabilities of the included `event_scheduler`.
