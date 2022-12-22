@@ -12,12 +12,17 @@ mod cron;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+	// Parse CLI args
+	let verbose = {
+		let mut args = env::args();
+		args.any(|a| a == "-v" || a == "--verbose")
+	};
 	// Parse config
 	let config_path = {
 		const ENV: &str = "MY_TIMERS_CONFIG";
 		const DEFAULT: &str = "config.json";
 		env::var(ENV).or_else(|err| {
-			eprintln!("{} is not set, using {}", ENV, DEFAULT);
+			if verbose { eprintln!("{} is not set, using {}", ENV, DEFAULT); }
 			Err(err)
 		}).unwrap_or(DEFAULT.into())
 	};
@@ -28,7 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 
 	// Initialize logging destinations
-	let _guard = config.log.init();
+	let _guards = config.log.init(verbose);
 	event!(Level::INFO, "my_timers started");
 
 	// Connect to DB
@@ -55,7 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		const ENV: &str = "MY_TIMERS_EVENTS";
 		const DEFAULT: &str = "events.conf";
 		env::var(ENV).or_else(|err| {
-			eprintln!("{} is not set, using {}", ENV, DEFAULT);
+			if verbose { eprintln!("{} is not set, using {}", ENV, DEFAULT) };
 			Err(err)
 		}).unwrap_or(DEFAULT.into())
 	};
@@ -93,7 +98,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await
 		}
 	};
-	event!(parent: None, Level::INFO, "Ready!");
+	event!(parent: None, Level::INFO, "Starting event loop");
 
 	// Event loop
 	loop {

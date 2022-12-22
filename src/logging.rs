@@ -16,7 +16,7 @@ pub struct Config {
 
 impl Config {
 	// Initialize tracing
-	pub fn init(&self) -> Vec<Option<WorkerGuard>> {
+	pub fn init(&self, verbose: bool) -> Vec<Option<WorkerGuard>> {
 		let mut _guards: Vec<Option<WorkerGuard>> = Vec::with_capacity(2);
 
 		macro_rules! layer {
@@ -38,7 +38,7 @@ impl Config {
 			.with(file_log)
 			.with(stdio_log)
 			// Filter logs
-			.with(filter::filter())
+			.with(filter::filter(verbose))
 			.init();
 		_guards
 	}
