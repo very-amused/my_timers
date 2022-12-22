@@ -9,6 +9,7 @@ There are two main files used to configure `my_timers`, both of them have a conf
 ### config.json
 There are two top level keys in `config.json`: `db` and `log`. `db` configures how my_timers connects to a MariaDB/MySQL database,
 while `log` configures how my_timers records event runs via logs/traces.
+
 ```json
 {
   "db": {
@@ -72,5 +73,61 @@ while `log` configures how my_timers records event runs via logs/traces.
 ```
 
 ### events.conf
+Event configuration syntax is [sxhkd](https://github.com/baskerville/sxhkd)-like.
+Comments begin with `#`, any text on the line after this character is ignored.
+
+Events are composed of a *name*, an *interval*, and a *body*:
+```
+# A comment
+name:
+interval
+  some sql statement; # Comments can be placed in the event body, but this is not recommended
+  another sql statement;
+
+# Same-line intervals are permitted but not recommended, as they hurt clarity
+name: interval
+  statement;
+```
+
+#### Name
+A clear, concise description of the event's function/purpose.
+
+#### Interval
+Cron syntax specifying when the event will run. The non-standard, optional `@startup` suffix
+can be used to cause an event to run when my_timers starts, in addition to its cron interval.
+
+#### Body
+An event's body is composed of SQL statement(s) to be executed when the event runs. Each line in an event's body must be indented with a minimum of 1 tab or 2 spaces,
+unindented lines will be interpreted as the beginning of new events. SQL statements are semicolon-terminated and may span multiple lines (as long as each line is indented).
+
+**NOTE:** Events are run on single MariaDB/MySQL transactions; no changes will be committed unless
+*all* statements in the event execute successfully. Therefore, it is safe to write statements that depend on each other.
+
+#### Examples:
+
+```
+# Clear auth sessions older than 2 weeks (and not currently in use,
+# decided by whether the token has been active within the past hour)
+Expire inactive sessions:
+0 * * * *
+  DELETE FROM Sessions
+    WHERE UNIX_TIMESTAMP() - Created_Timestamp >= (14 * 24 * 60 * 60)
+    AND UNIX_TIMESTAMP() - LastUsed_Timestamp >= (60 * 60);
+
+# Clear unverified TOTP entries after 1 minute
+Clear unverified TOTP:
+* * * * * @startup
+  DELETE FROM TOTP WHERE Verified = 0 AND UNIX_TIMESTAMP() - Created_Timestamp > 60;
+
+# Reset users who have changed their email but not verified the new email within 1 week to their old email
+Reset unverified email changes:
+0 * * * * @startup
+	UPDATE Users, EmailVerifyTokens SET Users.Email = Users.OldEmail, Users.Verified = 1
+		WHERE Users.ID = EmailVerifyTokens.UserID
+			AND UNIX_TIMESTAMP() - EmailVerifyTokens.Created_Timestamp >= (7 * 24 * 60 * 60)
+			AND Users.OldEmail IS NOT NULL;
+	DELETE FROM EmailVerifyTokens WHERE UNIX_TIMESTAMP() - Created_Timestamp >= (7 * 24 * 60 * 60);
+	UPDATE Users SET OldEmail = NULL WHERE Email = OldEmail AND Verified = 1;
+```
 
 This project is not currently production ready.
