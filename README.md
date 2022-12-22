@@ -10,7 +10,7 @@ There are two main files used to configure `my_timers`, both of them have a conf
 There are two top level keys in `config.json`: `db` and `log`. `db` configures how my_timers connects to a MariaDB/MySQL database,
 while `log` configures how my_timers records event runs via logs/traces.
 
-```json
+```jsonc
 {
   "db": {
     // Name of the database user my_timers will try to connect as
