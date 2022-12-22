@@ -7,7 +7,7 @@ pub struct Config {
 	#[serde(default)]
 	password: String,
 
-	// Connection protocol to use, SOCKET or TLS are valid
+	// Connection protocol to use, TCP or SOCKET are supported
 	#[serde(default = "Config::default_protocol")]
 	protocol: String,
 

@@ -89,7 +89,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	let mut interval = {
 		let mut to_minute = time::interval(to_next_minute());
 		to_minute.tick().await;
-		event!(Level::DEBUG, "Starting event loop in {:?}", to_minute.period());
+		event!(Level::INFO, "Starting event loop in {:?}", to_minute.period());
 		tokio::select! {
 			_ = to_minute.tick() => {
 				// Start minute interval ticker

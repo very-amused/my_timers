@@ -71,15 +71,34 @@ impl Event {
 		let mut tx = conn.start_transaction(TxOpts::default()).await?;
 
 		// Run the event body
+		let mut i = 0;
 		for stmt in &self.body {
-			let span = span!(Level::TRACE, "Exec stmt");
+			let span = span!(Level::DEBUG, "Exec", stmt = i,  action = Self::action(stmt));
 			async {
-				tx.exec_drop(stmt, params::Params::Empty).await
+				tx.exec_drop(stmt, params::Params::Empty).await?;
+				event!(Level::DEBUG, "{} Rows affected", tx.affected_rows());
+				let info = tx.info();
+				if info.len() > 0 {
+					event!(Level::TRACE, "{}", info);
+				}
+				Ok::<(), mysql_async::Error>(())
 			}.instrument(span).await?;
+			i += 1;
 		}
 
 		tx.commit().await?;
 		Ok(())
+	}
+
+	fn action(stmt: &str) -> String {
+		let parts: Vec<&str> = stmt.trim().split(" ").collect();
+		match parts[0].to_uppercase().as_str() { // TODO: more robust parsing
+			"INSERT" if parts[1].to_ascii_uppercase() == "INTO" => parts[0..3].join(" "),
+			"INSERT" => parts[0..2].join(" "),
+			"UPDATE" => parts[0..2].join(" "),
+			"DELETE" => parts[0..3].join(" "),
+			_ => parts[0].to_string()
+		}
 	}
 }
 
