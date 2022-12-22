@@ -1,8 +1,11 @@
 # my_timers
-### My ***T***hreaded, ***I***nformation ***M***ultiplexing ***E***vent ***R***unner for ***S***QL
+### My <u>T</u>hreaded, <u>I</u>nformation-<u>M</u>ultiplexing <u>E</u>vent <u>R</u>unner for <u>S</u>QL
+
+my_timers is a multithreaded, async, MariaDB/MySQL event runner, built out of frustration
+with the verbose syntax and poor logging capabilities of the included `event_scheduler`.
 
 ## Configuration
-There are two main files used to configure `my_timers`, both of them have a configurable location via environment variables:
+There are two main files used to configure my_timers, both of them have a configurable location via environment variables:
 - `$MY_TIMERS_CONFIG` (default: `./config.json`): Database connection and logging options.
 - `$MY_TIMERS_EVENTS` (default: `./events.conf`): Event definitions.
 
