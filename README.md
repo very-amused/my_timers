@@ -3,7 +3,7 @@
 
 ## Configuration
 There are two main files used to configure `my_timers`, both of them have a configurable location via environment variables:
-- `$MY_TIMERS_CONFIG` (default: `./config.json`): Daemon options, such as database connection parameters and logging destinations. 
+- `$MY_TIMERS_CONFIG` (default: `./config.json`): Database connection and logging options.
 - `$MY_TIMERS_EVENTS` (default: `./events.conf`): Event definitions.
 
 ### config.json
@@ -15,11 +15,12 @@ while `log` configures how my_timers records event runs via logs/traces.
     // Name of the database user my_timers will try to connect as
     "user": "admin",
 
-    // Password for the database user (optional)
+    // Password for the database user
+    // (optional)
     "password": "$0mething_v3ry--53cur3",
 
     // Connection protocol used to access the database
-    // (optional, options: "SOCKET" | "TCP", default: "SOCKET")
+    // (optional, values: "SOCKET"|"TCP", default: "SOCKET")
     "protocol": "TCP",
 
     // Address of the database server.
@@ -50,7 +51,21 @@ while `log` configures how my_timers records event runs via logs/traces.
       // i.e /var/log/myapp/my_timers.log.YYY-MM-DD-HH.
       // Due to this behavior, it is highly recommended that specified log directories are used
       // to avoid flooding system directories like /var/log
-      "path": "/var/log/myapp/my_timers.log"
+      "path": "/var/log/myapp/my_timers.log",
+
+      // The frequency at which output is moved to a newly created logfile
+      // (optional, values: "never"|"daily"|"hourly"|"minutely", default: "daily")
+      "rotation": "never"
+    },
+
+    // Output to stdout/stderr
+    "stdio": {
+      // (optional, default: true)
+      "enabled": true,
+
+      // The output stream logs will be written to
+      // (optional, values: "stdout"|"stderr", default: "stdout")
+      "stream": "stderr"
     }
   }
 }
