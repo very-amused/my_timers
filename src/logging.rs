@@ -65,10 +65,6 @@ where S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>
 		.boxed()
 }
 
-// ANSI code to clear a terminal screen
-#[cfg(debug_assertions)]
-const CLS: &str = "\x1b[H\x1b[J";
-
 // Config for file logging (with optional rotation)
 #[derive(Deserialize)]
 pub struct FileConfig {
@@ -115,6 +111,7 @@ impl GuardedRegLayer for FileConfig {
 		};
 		if cfg!(debug_assertions) {
 			// Clear screen for observers such as tail
+			const CLS: &str = "\x1b[H\x1b[J";
 			if let Err(e) = write!(&mut file_appender, "{}", CLS) {
 				eprintln!("Failed to clear logfile view {}: {}", &self.path, e);
 			}

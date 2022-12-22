@@ -63,11 +63,11 @@ impl Event {
 		Ok(Arc::new(evt))
 	}
 
-	#[instrument(skip_all, fields(event = %self), err)]
+	#[instrument(skip_all, fields(event = %self, interval = %self.interval), err)]
 	pub async fn run(&self, pool: mysql_async::Pool) -> Result<(), mysql_async::Error> {
 		// Start a transaction to run the event on
 		let mut conn = pool.get_conn().await?;
-		event!(Level::INFO, "Using conn {}", conn.id());
+		event!(Level::INFO, "Running event on conn {}", conn.id());
 		let mut tx = conn.start_transaction(TxOpts::default()).await?;
 
 		// Run the event body
@@ -87,6 +87,7 @@ impl Event {
 		}
 
 		tx.commit().await?;
+		event!(Level::INFO, "Done");
 		Ok(())
 	}
 
@@ -104,7 +105,7 @@ impl Event {
 
 impl Display for Event {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}: {}", self.label, self.interval)
+		write!(f, "{}", self.label)
 	}
 }
 
