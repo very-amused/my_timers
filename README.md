@@ -132,5 +132,3 @@ Reset unverified email changes:
 	DELETE FROM EmailVerifyTokens WHERE UNIX_TIMESTAMP() - Created_Timestamp >= (7 * 24 * 60 * 60);
 	UPDATE Users SET OldEmail = NULL WHERE Email = OldEmail AND Verified = 1;
 ```
-
-This project is not currently production ready.
