@@ -45,16 +45,13 @@ impl Config {
 }
 
 pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
-pub trait RegLayer { // Tracing layer, used for multi-layer logging composition
-	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> Option<BoxedLayer<S>>;
-}
-// Guarded registry layer for non-blocking logging threads
-// (i.e for allowing multiple processes to write to the same file)
+
+/// Guarded tracing layer for non-blocking write threads
 pub trait GuardedRegLayer { 
 	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>);
 }
 
-// Apply consistent formatting to output layers
+/// Apply consistent formatting to output layers
 fn fmt_layer<S>(writer: NonBlocking) -> BoxedLayer<S>
 where S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>
 {
@@ -65,7 +62,11 @@ where S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>
 		.boxed()
 }
 
-// Config for file logging (with optional rotation)
+fn default_enabled() -> bool {
+	true
+}
+
+/// Config for logfile output (with optional rotation)
 #[derive(Deserialize)]
 pub struct FileConfig {
 	#[serde(default = "default_enabled")]
@@ -81,7 +82,7 @@ impl FileConfig {
 	}
 }
 
-// File logging is done on a non-blocking layer
+/// Tracing layer for file logging
 impl GuardedRegLayer for FileConfig {
 	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>) {
 		if !self.enabled {
@@ -121,10 +122,7 @@ impl GuardedRegLayer for FileConfig {
 	}
 }
 
-fn default_enabled() -> bool {
-	true
-}
-// Config for logging to stdout/stderr
+/// Config for stdout/stderr output
 #[derive(Deserialize)]
 pub struct StdioConfig {
 	#[serde(default = "default_enabled")]
@@ -139,6 +137,7 @@ impl StdioConfig {
 	}
 }
 
+/// Tracing layer for stdio logging
 impl GuardedRegLayer for StdioConfig {
 	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>) {
 		if !self.enabled {

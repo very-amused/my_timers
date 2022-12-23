@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 	// Listen for ctrl+c/SIGINT to safely shutdown.
 	// tokio::select! must be used to catch sigints for all future awaits
-	// on the main threads
+	// on the main thread
 	let ctrl_c = signal::ctrl_c();
 	tokio::pin!(ctrl_c);
 
@@ -122,6 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	}
 }
 
+/// Duration until next minute
 fn to_next_minute() -> Duration {
 	// Ceil to nearest ms + 1
 	let mut next = chrono::Utc::now();
@@ -136,10 +137,11 @@ fn to_next_minute() -> Duration {
 
 	let mut now = chrono::Utc::now(); // Get duration against current time
 	// Round up to next ms
-	now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 1_000_000).unwrap();
+	now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 2_000_000).unwrap();
 	(next - now).to_std().unwrap()
 }
 
+/// Safely shutdown the main thread
 #[instrument(name = "Shutting down", skip_all, err)]
 async fn shutdown(event_threads: Option<JoinSet<()>>, pool: mysql_async::Pool) -> Result<(), Box<dyn Error>> {
 	event!(Level::INFO, "Shutting down");

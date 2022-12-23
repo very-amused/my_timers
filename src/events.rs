@@ -43,7 +43,7 @@ impl Event {
 		}
 		// Parse label and interval
 		let mut evt = Event {
-			label: evt_parts.pop_front().unwrap(),
+			label: evt_parts.pop_front().unwrap().trim().to_string(),
 			interval: evt_parts.pop_front().unwrap().trim().parse()
 				.map_err(EventParseError::CronParseError)?,
 			body: Vec::new()
