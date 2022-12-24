@@ -3,9 +3,9 @@
 rustflags=--release --quiet --message-format json
 rsync-flags=-h --size-only --info=progress2
 src=src Cargo.toml Cargo.lock .cargo
-targets=x86_64-unknown-linux-gnu x86_64-unknown-freebsd
+targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
-vms=freebsd-cc
+vms=freebsd-cc void-cc
 
 # Cross compile using VMs
 define cc =
@@ -37,6 +37,9 @@ all: $(targets)
 
 x86_64-unknown-linux-gnu:
 	cargo build $(rustflags) --target x86_64-unknown-linux-gnu | $(prefix)
+
+x86_64-unknown-linux-musl: void-cc
+	$(cc)
 
 x86_64-unknown-freebsd: freebsd-cc
 	$(cc)
