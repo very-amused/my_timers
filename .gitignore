@@ -2,3 +2,5 @@
 config.json
 events.conf
 log/
+/my_timers
+release

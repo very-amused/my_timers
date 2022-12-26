@@ -4,6 +4,10 @@
 my_timers is a multithreaded, async MariaDB/MySQL event runner, made out of frustration
 with the verbose syntax and poor logging capabilities of the included `event_scheduler`.
 
+## Installation
+- `# make install` - Install to /usr/local/bin (default)
+- `# PREFIX=/usr make install` - Install to /usr/bin
+
 ## Configuration
 There are two main files used to configure my_timers, both of them have a configurable location via environment variables:
 - `$MY_TIMERS_CONFIG` (default: `./config.json`): Database connection and logging options.
