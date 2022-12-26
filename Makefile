@@ -7,6 +7,7 @@ rsync-flags=-h --size-only --info=progress2
 src=src Cargo.toml Cargo.lock .cargo
 targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
+releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 vms=freebsd-cc void-cc
 
 # Installation vars
@@ -32,12 +33,11 @@ endef
 
 # Package a release
 define pack
-[ -d release/$@ ] || mkdir -p release/$@
-cp target/$@/release/my_timers \
-	Makefile \
-	README.md \
-	LICENSE \
-	release/$@/
+[ -d release/$(releasename) ] || mkdir -p release/$(releasename)
+cp target/$@/release/my_timers Makefile README.md LICENSE \
+	release/$(releasename)/
+tar czf release/$(releasename).tar.gz release/$(releasename)/*
+zip -r release/$(releasename).zip release/$(releasename)/*
 endef
 
 # IMPORTANT: ensure VMs are fully shutdown before this script attempts to start them
@@ -57,7 +57,7 @@ endef
 all: $(targets)
 
 install: my_timers README.md LICENSE
-	install -D $< $(DESTDIR)$(PREFIX)/bin/$<
+	install -D my_timers $(DESTDIR)$(PREFIX)/bin/my_timers
 	install -Dm644 README.md $(DESTDIR)$(DATADIR)/doc/my_timers/README.md
 	install -Dm644 LICENSE $(DESTDIR)$(DATADIR)/licenses/my_timers/LICENSE
 
@@ -98,4 +98,4 @@ clean-vms: $(vms)
 
 clean: clean-local start-vms poll-vms .WAIT clean-vms .WAIT shutdown-vms
 
-.PHONY: all install $(vms) $(targets) clean-local start-vms poll-vms shutdown-vms clean-vms clean
+.PHONY: all install uninstall $(vms) $(targets) clean-local start-vms poll-vms shutdown-vms clean-vms clean
