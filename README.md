@@ -7,7 +7,6 @@ with the verbose syntax and poor logging capabilities of the included `event_sch
 [![AUR version](https://img.shields.io/aur/version/my_timers?label=AUR&logo=archlinux&style=flat-square)](https://aur.archlinux.org/packages/my_timers)
 
 ## Installation
-my_timers is available as a package on the (AUR)[https://aur.archlinux.org/packages/my_timers].
 - `# make install` - Install to /usr/local/bin (default)
 - `# PREFIX=/usr make install` - Install to /usr/bin
 
