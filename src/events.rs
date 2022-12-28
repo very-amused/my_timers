@@ -51,13 +51,18 @@ impl Event {
 
 		// Parse SQL body
 		let body = evt_parts.pop_front().unwrap();
-		let stmts = body.split(';').filter(|s| s.len() > 0);
+		let mut stmts: VecDeque<String> = body.split(";")
+			.map(|s| s.trim().replace("\t", "")) // Remove tabs
+			.filter(|s| s.len() > 0).collect();
+
 		let mut conn = pool.get_conn().await
 			.map_err(EventParseError::SQLError)?;
-		for stmt in stmts { // Validate SQL stmts
-			conn.prep(stmt).await
+		while let Some(stmt) = stmts.pop_front() {
+			// Validate SQL stmt
+			conn.prep(&stmt).await
 				.map_err(EventParseError::SQLError)?;
-			evt.body.push(stmt.into());
+			// Push to event body
+			evt.body.push(stmt);
 		}
 
 		evt_parts.clear(); // Ensure the event parsing queue is empty
@@ -178,7 +183,7 @@ pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Arc<Event>
 			},
 			3 => { // Body
 				if l.starts_with('\t') || l.starts_with("  ") {
-					evt_parts[2].push('\n');
+					evt_parts[2].push(' ');
 					evt_parts[2].push_str(&l);
 				} else {
 					// Parse event

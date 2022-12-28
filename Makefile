@@ -66,6 +66,8 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 
+local: x86_64-unknown-linux-gnu
+
 x86_64-unknown-linux-gnu:
 	cargo build $(rustflags) --target $@ | $(prefix)
 	cp target/$@/release/my_timers my_timers
@@ -98,4 +100,4 @@ clean-vms: $(vms)
 
 clean: clean-local start-vms poll-vms .WAIT clean-vms .WAIT shutdown-vms
 
-.PHONY: all install uninstall $(vms) $(targets) clean-local start-vms poll-vms shutdown-vms clean-vms clean
+.PHONY: all local install uninstall $(vms) $(targets) clean-local start-vms poll-vms shutdown-vms clean-vms clean
