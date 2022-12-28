@@ -4,7 +4,10 @@
 my_timers is a multithreaded, async MariaDB/MySQL event runner, made out of frustration
 with the verbose syntax and poor logging capabilities of the included `event_scheduler`.
 
+[![AUR version](https://img.shields.io/aur/version/my_timers?label=AUR&logo=archlinux&style=flat-square)](https://aur.archlinux.org/packages/my_timers)
+
 ## Installation
+my_timers is available as a package on the (AUR)[https://aur.archlinux.org/packages/my_timers].
 - `# make install` - Install to /usr/local/bin (default)
 - `# PREFIX=/usr make install` - Install to /usr/bin
 
