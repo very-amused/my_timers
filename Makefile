@@ -57,9 +57,12 @@ endef
 all: $(targets)
 
 install: my_timers README.md LICENSE
-	install -D my_timers $(DESTDIR)$(PREFIX)/bin/my_timers
-	install -Dm644 README.md $(DESTDIR)$(DATADIR)/doc/my_timers/README.md
-	install -Dm644 LICENSE $(DESTDIR)$(DATADIR)/licenses/my_timers/LICENSE
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install my_timers $(DESTDIR)$(PREFIX)/bin/my_timers
+	install -d $(DESTDIR)$(DATADIR)/doc/my_timers
+	install -m644 README.md $(DESTDIR)$(DATADIR)/doc/my_timers/README.md
+	install -d $(DESTDIR)$(DATADIR)/licenses/my_timers
+	install -m644 LICENSE $(DESTDIR)$(DATADIR)/licenses/my_timers/LICENSE
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/my_timers
