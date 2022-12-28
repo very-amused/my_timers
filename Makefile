@@ -54,7 +54,7 @@ define shutdown-vm
 sudo virsh shutdown $1 || true
 endef
 
-all: $(targets)
+all: clean-local .WAIT $(targets)
 
 install: my_timers README.md LICENSE
 	install -d $(DESTDIR)$(PREFIX)/bin
@@ -83,7 +83,7 @@ x86_64-unknown-freebsd: freebsd-cc
 	$(cc)
 
 clean-local:
-	rm -rf target
+	rm -rf target release
 
 # Start all VMs
 start-vms: $(vms)
