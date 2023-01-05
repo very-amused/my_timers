@@ -1,4 +1,4 @@
-use std::{env, error::Error, time::Duration};
+use std::{error::Error, time::Duration};
 use chrono::{Timelike, Local};
 use tokio::{time, task::JoinSet, signal};
 use tracing::{event, Level, span, Instrument, instrument};
@@ -8,32 +8,23 @@ mod db;
 mod logging;
 mod events;
 mod cron;
+mod args;
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 	// Parse CLI args
-	let verbose = {
-		let mut args = env::args();
-		args.any(|a| a == "-v" || a == "--verbose")
-	};
+	let args = args::args();
+
 	// Parse config
-	let config_path = {
-		const ENV: &str = "MY_TIMERS_CONFIG";
-		const DEFAULT: &str = "config.json";
-		env::var(ENV).or_else(|err| {
-			if verbose { eprintln!("{} is not set, using {}", ENV, DEFAULT); }
-			Err(err)
-		}).unwrap_or(DEFAULT.into())
-	};
-	let config = config::parse(&config_path).or_else(|err| {
-		eprintln!("Failed to parse config: {}", err);
+	let config = config::parse(&args.config_path).or_else(|err| {
+		eprintln!("Failed to parse {}:", &args.config_path);
 		Err(err)
 	})?;
 
 
 	// Initialize logging destinations
-	let _guards = config.log.init(verbose);
+	let _guards = config.log.init(args.verbose);
 	event!(Level::INFO, "my_timers started");
 
 	// Connect to DB
@@ -56,16 +47,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	tokio::pin!(ctrl_c);
 
 	// Read events from config
-	let config_path = {
-		const ENV: &str = "MY_TIMERS_EVENTS";
-		const DEFAULT: &str = "events.conf";
-		env::var(ENV).or_else(|err| {
-			if verbose { eprintln!("{} is not set, using {}", ENV, DEFAULT) };
-			Err(err)
-		}).unwrap_or(DEFAULT.into())
-	};
 	let events = tokio::select! {
-		evts = events::parse(&config_path, pool.clone()) => evts?,
+		evts = events::parse(&args.events_path, pool.clone()) => evts.or_else(|err| {
+			eprintln!("Failed to parse {}:", &args.events_path);
+			Err(err)
+		})?,
 		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await
 	};
 
