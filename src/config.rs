@@ -1,5 +1,5 @@
 use std::{fs::File, error::Error};
-use serde::{Deserialize};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -7,10 +7,6 @@ pub struct Config {
 	pub db: crate::db::Config,
 	// Log config options
 	pub log: crate::logging::Config
-}
-
-impl Config {
-
 }
 
 pub fn parse(path: &str) -> Result<Config, Box<dyn Error>> {
