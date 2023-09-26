@@ -1,6 +1,6 @@
 use std::{error::Error, time::Duration};
 use chrono::{Timelike, Local};
-use tokio::{time, task::JoinSet, signal};
+use tokio::{time, task::JoinSet, signal as tokio_signal};
 use tracing::{event, Level, span, Instrument, instrument};
 
 mod config;
@@ -9,6 +9,7 @@ mod logging;
 mod events;
 mod cron;
 mod args;
+mod signal;
 
 
 #[tokio::main]
@@ -41,10 +42,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	}
 
 	// Listen for ctrl+c/SIGINT to safely shutdown.
-	// tokio::select! must be used to catch sigints for all future awaits
+	// tokio::select! must be used to catch signals for all future awaits
 	// on the main thread
-	let ctrl_c = signal::ctrl_c();
+	let ctrl_c = tokio_signal::ctrl_c();
+	let mut sigterm_channel: Box<dyn signal::SignalChannel> = if cfg!(unix) {
+		Box::new(tokio_signal::unix::signal(
+				tokio_signal::unix::SignalKind::terminate())?)
+	} else {
+		Box::new(signal::SigNever)
+	};
+	let sigterm = sigterm_channel.recv();
 	tokio::pin!(ctrl_c);
+	tokio::pin!(sigterm);
 
 	// Read events from config
 	let events = tokio::select! {
@@ -52,7 +61,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 			eprintln!("Failed to parse {}:", &args.events_path);
 			Err(err)
 		})?,
-		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await
+		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await,
+		Some(_) = &mut sigterm => return shutdown(None, pool).await
 	};
 
 
@@ -83,7 +93,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 				// Start minute interval ticker
 				time::interval(Duration::from_secs(60))
 			},
-			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await
+			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await,
+			Some(_) = &mut sigterm => return shutdown(Some(event_threads), pool).await
 		}
 	};
 	event!(parent: None, Level::INFO, "Starting event loop");
@@ -93,7 +104,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		// Wait for the next minute, breaking the loop if ctrl+c is pressed
 		tokio::select! {
 			_ = interval.tick() => {},
-			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await
+			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await,
+			Some(_) = &mut sigterm => return shutdown(Some(event_threads), pool).await
 		}
 		// Iterate through each event, run the ones that match
 		let now = Local::now();
@@ -130,6 +142,7 @@ fn to_next_minute() -> Duration {
 	now = now.with_nanosecond(1_000_000 * (now.nanosecond() / 1_000_000) + 2_000_000).unwrap();
 	(next - now).to_std().unwrap()
 }
+
 
 /// Safely shutdown the main thread
 #[instrument(name = "Shutting down", skip_all, err)]
