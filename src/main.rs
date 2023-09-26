@@ -64,9 +64,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	for evt in &events {
 		if evt.interval.startup {
 			let pool = pool.clone();
-			let evt = evt.clone();
+			let evt = unsafe { (evt as *const events::Event).as_ref() };
 			event_threads.spawn(async move {
-				evt.run(pool).await.ok();
+				if let Some(evt) = evt {
+					evt.run(pool).await.ok();
+				}
 			});
 		}
 	}
@@ -98,10 +100,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		for evt in &events {
 			if evt.interval.match_time(&now) {
 				let pool = pool.clone();
-				let evt = evt.clone();
+				let evt = unsafe { (evt as *const events::Event).as_ref() };
 				event_threads.spawn(async move {
 					// Error logging is handled in the event's tracing span
-					evt.run(pool).await.ok();
+					if let Some(evt) = evt {
+						evt.run(pool).await.ok();
+					}
 				});	
 			}
 		}
