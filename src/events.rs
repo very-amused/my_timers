@@ -79,7 +79,7 @@ impl Event {
 		let mut tx = conn.start_transaction(TxOpts::default()).await?;
 
 		// Run the event body
-		let mut i = 0;
+		let mut i: usize = 0;
 		for stmt in &self.body {
 			let span = span!(Level::DEBUG, "Exec", stmt = i,  action = Self::action(stmt));
 			async {
