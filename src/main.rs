@@ -74,7 +74,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	for evt in &events {
 		if evt.interval.startup {
 			let pool = pool.clone();
-			let evt = unsafe { (evt as *const events::Event).as_ref() };
+			let evt = unsafe { (&**evt as *const events::Event).as_ref() };
 			event_threads.spawn(async move {
 				if let Some(evt) = evt {
 					evt.run(pool).await.ok();
@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 	// Event loop
 	loop {
-		// Wait for the next minute, breaking the loop if ctrl+c is pressed
+		// Wait for the next minute, breaking the loop if a signal is caught
 		tokio::select! {
 			_ = interval.tick() => {},
 			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await,
@@ -112,7 +112,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		for evt in &events {
 			if evt.interval.match_time(&now) {
 				let pool = pool.clone();
-				let evt = unsafe { (evt as *const events::Event).as_ref() };
+				let evt = unsafe { (&**evt as *const events::Event).as_ref() };
 				event_threads.spawn(async move {
 					// Error logging is handled in the event's tracing span
 					if let Some(evt) = evt {
