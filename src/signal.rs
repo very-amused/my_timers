@@ -4,7 +4,6 @@ use core::{pin::Pin, marker::PhantomData};
 #[cfg(unix)]
 use tokio::signal::unix as unix_signal;
 
-
 /// Channel used to receive OS signals
 #[async_trait]
 pub trait SignalChannel {
@@ -35,7 +34,7 @@ impl<T> Never<T> {
 impl<T> Future for Never<T> {
 	type Output = T;
 	fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
-		return Poll::Pending;
+		Poll::Pending
 	}
 }
 
@@ -46,7 +45,7 @@ pub struct SigNever;
 #[async_trait]
 impl SignalChannel for SigNever {
 	async fn recv(&mut self) -> Option<()> {
-		Never::<Option<()>>::new().await
+		Never::new().await
 	}
 }
 
