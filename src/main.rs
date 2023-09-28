@@ -45,12 +45,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	// tokio::select! must be used to catch signals for all future awaits
 	// on the main thread
 	let ctrl_c = tokio_signal::ctrl_c();
-	let mut sigterm_channel: Box<dyn signal::SignalChannel> = if cfg!(unix) {
-		Box::new(tokio_signal::unix::signal(
-				tokio_signal::unix::SignalKind::terminate())?)
-	} else {
-		Box::new(signal::SigNever)
-	};
+	let mut sigterm_channel = signal::new(signal::SignalKind::SIGTERM).or_else(|err| {
+		eprintln!("Failed to create SIGTERM channel");
+		Err(err)
+	})?;
 	let sigterm = sigterm_channel.recv();
 	tokio::pin!(ctrl_c);
 	tokio::pin!(sigterm);
@@ -74,11 +72,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	for evt in &events {
 		if evt.interval.startup {
 			let pool = pool.clone();
-			let evt = unsafe { (&**evt as *const events::Event).as_ref() };
+			let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
 			event_threads.spawn(async move {
-				if let Some(evt) = evt {
-					evt.run(pool).await.ok();
-				}
+				evt.run(pool).await.ok();
 			});
 		}
 	}
@@ -112,12 +108,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		for evt in &events {
 			if evt.interval.match_time(&now) {
 				let pool = pool.clone();
-				let evt = unsafe { (&**evt as *const events::Event).as_ref() };
+				let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
 				event_threads.spawn(async move {
 					// Error logging is handled in the event's tracing span
-					if let Some(evt) = evt {
-						evt.run(pool).await.ok();
-					}
+					evt.run(pool).await.ok();
 				});	
 			}
 		}

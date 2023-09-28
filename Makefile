@@ -8,7 +8,8 @@ src=src Cargo.toml Cargo.lock .cargo
 targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
-vms=freebsd-cc void-cc
+bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
+vms=freebsd-cc void-cc win10-ltsc
 
 # Installation vars
 ifndef PREFIX
@@ -34,7 +35,7 @@ endef
 # Package a release
 define pack
 [ -d release/$(releasename) ] || mkdir -p release/$(releasename)
-cp target/$@/release/my_timers Makefile README.md LICENSE \
+cp target/$@/release/my_timers$(bin-ext) Makefile README.md LICENSE \
 	release/$(releasename)/
 tar czf release/$(releasename).tar.gz release/$(releasename)/*
 zip -r release/$(releasename).zip release/$(releasename)/*
@@ -80,6 +81,9 @@ x86_64-unknown-linux-musl: void-cc
 	$(cc)
 
 x86_64-unknown-freebsd: freebsd-cc
+	$(cc)
+
+x86_64-pc-windows-msvc: win10-ltsc
 	$(cc)
 
 clean-local:

@@ -1,7 +1,9 @@
 use async_trait::async_trait;
-use std::{task::{Context, Poll}, future::Future};
+use std::{task::{Context, Poll}, future::Future, io};
 use core::{pin::Pin, marker::PhantomData};
-use tokio::signal;
+#[cfg(unix)]
+use tokio::signal::unix as unix_signal;
+
 
 /// Channel used to receive OS signals
 #[async_trait]
@@ -11,7 +13,7 @@ pub trait SignalChannel {
 
 #[cfg(unix)]
 #[async_trait]
-impl SignalChannel for signal::unix::Signal {
+impl SignalChannel for unix_signal::Signal {
 	async fn recv(&mut self) -> Option<()> {
 		self.recv().await
 	}
@@ -47,3 +49,24 @@ impl SignalChannel for SigNever {
 		Never::<Option<()>>::new().await
 	}
 }
+
+/// Unix signal types accepted by new()
+pub enum SignalKind {
+	SIGTERM
+}
+
+/// Open a new signal channel
+#[cfg(unix)]
+pub fn new(kind: SignalKind) -> io::Result<Box<dyn SignalChannel>> {
+	match kind {
+		SignalKind::SIGTERM => Ok(Box::new(unix_signal::signal(unix_signal::SignalKind::terminate())?))
+	}	
+}
+
+/// Open a new signal channel
+/// (non-Unix platform, always returns Ok(SigNever))
+#[cfg(not(unix))]
+pub fn new(_kind: SignalKind) -> io::Result<Box<dyn SignalChannel>> {
+	Ok(Box::new(SigNever))
+}
+
