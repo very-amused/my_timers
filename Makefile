@@ -76,10 +76,11 @@ uninstall:
 
 nsis: win10-ltsc README.md LICENSE installer/my_timers.nsi
 	$(call update-nsis,installer/my_timers.nsi)
-	cp installer/*.nsi /mnt/$</NSIS/my_timers/
-	cp README.md LICENSE /mnt/$</NSIS/my_timers/
+	cp installer/my_timers.nsi /mnt/$</NSIS/my_timers/
+	cp README.md /mnt/$</NSIS/my_timers/
+	cp LICENSE /mnt/$</NSIS/my_timers/LICENSE.txt
 	ssh $< "cp ~/my_timers/target/x86_64-pc-windows-msvc/release/my_timers.exe ~/Desktop/Shared/NSIS/my_timers/"
-	ssh $< "cd ~/Desktop/Shared/NSIS/my_timers; makensis.exe *.nsi"
+	ssh $< "cd ~/Desktop/Shared/NSIS/my_timers; makensis.exe my_timers.nsi"
 .PHONY: nsis
 
 local: x86_64-unknown-linux-gnu

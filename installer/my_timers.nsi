@@ -52,7 +52,7 @@ FunctionEnd
 Section "my_timers"
 	SetOutPath $INSTDIR
 	File README.md
-	File LICENSE
+	File LICENSE.txt
 	CreateDirectory $INSTDIR\bin
 	File /oname=$INSTDIR\bin\my_timers.exe my_timers.exe
 	WriteUninstaller $INSTDIR\uninstaller.exe
@@ -90,7 +90,7 @@ SectionEnd
 Section "uninstall"
 	Delete $INSTDIR\bin\my_timers.exe
 	RMDir $INSTDIR\bin
-	Delete $INSTDIR\LICENSE
+	Delete $INSTDIR\LICENSE.txt
 	Delete $INSTDIR\README.md
 	Delete $INSTDIR\uninstaller.exe
 	RMDir $INSTDIR
