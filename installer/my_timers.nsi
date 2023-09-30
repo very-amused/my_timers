@@ -5,6 +5,8 @@
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
+Var StartMenuFolder
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
@@ -39,6 +41,15 @@ Section "my_timers"
 			"Publisher" "Keith Scroggs <very-amused>"
 	WriteRegStr HKLM "${ARP}" \
 			"DisplayVersion" "${DISPLAY_VERSION}"
+
+	# Create shortcuts
+	!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+		CreateDirectory $SMPROGRAMS\$StartMenuFolder
+		CreateShortcut $SMPROGRAMS\$StartMenuFolder\my_timers.lnk \
+				$INSTDIR\bin\my_timers.exe
+		CreateShortcut $SMPROGRAMS\$StartMenuFolder\README.md.lnk \
+				$INSTDIR\README.md
+	!insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
 Section "uninstall"
@@ -51,4 +62,10 @@ Section "uninstall"
 
 	# Remove uninstall registry data
 	DeleteRegKey HKLM "${ARP}"
+
+	# Remove any installed shortcuts
+	!insertmacro MUI_STARTMENU_GETFOLDER Application $R0
+	Delete $SMPROGRAMS\$R0\my_timers.lnk
+	Delete $SMPROGRAMS\$R0\README.md.lnk
+	RMDir $SMPROGRAMS\$R0
 SectionEnd
