@@ -69,8 +69,12 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 
-cp-nsis: win10-ltsc
+nsis: win10-ltsc README.md LICENSE
 	cp installer/*.nsi /mnt/$</NSIS/my_timers/
+	cp README.md LICENSE /mnt/$</NSIS/my_timers/
+	ssh $< "cp ~/my_timers/target/x86_64-pc-windows-msvc/release/my_timers.exe ~/Desktop/Shared/NSIS/my_timers/"
+	ssh $< "cd ~/Desktop/Shared/NSIS/my_timers; makensis.exe *.nsi"
+.PHONY: nsis
 
 local: x86_64-unknown-linux-gnu
 
