@@ -9,6 +9,7 @@ targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebs
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
+version=$(shell git tag | tail -n 1 | sed 's/^v//')
 vms=freebsd-cc void-cc win10-ltsc
 
 # Installation vars
@@ -54,6 +55,10 @@ define shutdown-vm
 sudo virsh shutdown $1 || true
 endef
 
+define update-nsis
+sed -e 's/^!define DISPLAY_VERSION.*$$/!define DISPLAY_VERSION "$(version)"/' -i "$1"
+endef
+
 all: clean-local .WAIT $(targets)
 
 install: my_timers README.md LICENSE
@@ -69,7 +74,8 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 
-nsis: win10-ltsc README.md LICENSE
+nsis: win10-ltsc README.md LICENSE installer/my_timers.nsi
+	$(call update-nsis,installer/my_timers.nsi)
 	cp installer/*.nsi /mnt/$</NSIS/my_timers/
 	cp README.md LICENSE /mnt/$</NSIS/my_timers/
 	ssh $< "cp ~/my_timers/target/x86_64-pc-windows-msvc/release/my_timers.exe ~/Desktop/Shared/NSIS/my_timers/"
