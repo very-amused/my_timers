@@ -28,7 +28,6 @@ rsync $(rsync-flags) -r $(src) $<:my_timers/
 ssh $< "cd my_timers && cargo build $(rustflags) --target $@ | $(prefix)"
 rm -rf target/$@
 rsync $(rsync-flags) -r $<:my_timers/target/$@ target/
-$(call shutdown-vm,$<)
 $(pack)
 endef
 
@@ -69,6 +68,9 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
+
+cp-nsis: win10-ltsc
+	cp installer/*.nsi /mnt/$</NSIS/my_timers/
 
 local: x86_64-unknown-linux-gnu
 
