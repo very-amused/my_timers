@@ -1,6 +1,7 @@
 !include "MUI.nsh"
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
+!include "version.nsh"
 
 !define MUI_ABORTWARNING
 
@@ -47,7 +48,6 @@ Function .onInit
 FunctionEnd
 
 !define ARP "Software\Microsoft\Windows\CurrentVersion\Uninstall\my_timers"
-!define DISPLAY_VERSION "0.1.2"
 
 Section "my_timers"
 	SetOutPath $INSTDIR

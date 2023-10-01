@@ -55,10 +55,6 @@ define shutdown-vm
 sudo virsh shutdown $1 || true
 endef
 
-define update-nsis
-sed -e 's/^!define DISPLAY_VERSION.*$$/!define DISPLAY_VERSION "$(version)"/' -i "$1"
-endef
-
 all: clean-local .WAIT $(targets)
 
 install: my_timers README.md LICENSE
@@ -74,9 +70,9 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 
-nsis: win10-ltsc README.md LICENSE installer/my_timers.nsi
-	$(call update-nsis,installer/my_timers.nsi)
-	cp installer/my_timers.nsi /mnt/$</NSIS/my_timers/
+nsis: win10-ltsc README.md LICENSE installer/my_timers.nsi installer/*.nsh
+	df | grep /mnt/$< || mount /mnt/$<
+	cp installer/my_timers.nsi installer/*.nsh /mnt/$</NSIS/my_timers/
 	cp README.md /mnt/$</NSIS/my_timers/
 	cp LICENSE /mnt/$</NSIS/my_timers/LICENSE.txt
 	ssh $< "cp ~/my_timers/target/x86_64-pc-windows-msvc/release/my_timers.exe ~/Desktop/Shared/NSIS/my_timers/"
