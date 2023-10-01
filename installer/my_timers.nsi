@@ -5,6 +5,9 @@
 
 !define MUI_ABORTWARNING
 
+caption "my_timers ${DISPLAY_VERSION} Installer"
+!define MUI_WELCOMEPAGE_TITLE "Welcome to the my_timers ${DISPLAY_VERSION} Installer"
+!define MUI_WELCOMEPAGE_TEXT "Setup will guide you through the installation of my_timers ${DISPLAY_VERSION}.\r\n\r\nClick next to continue."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 Var StartMenuFolder
