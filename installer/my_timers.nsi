@@ -21,7 +21,7 @@ Page custom pathPage pathPageLeave
 !insertmacro MUI_LANGUAGE "English"
 
 Name "my_timers"
-OutFile "my_timers-installer-x86_64.exe"
+OutFile "my_timers-v${DISPLAY_VERSION}-installer-x86_64.exe"
 InstallDir "$PROGRAMFILES64\my_timers"
 ShowInstDetails show
 

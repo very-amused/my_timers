@@ -9,7 +9,7 @@ targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebs
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
-version=$(shell git tag | tail -n 1 | sed 's/^v//')
+display-version=grep DISPLAY_VERSION installer/version.nsh | awk '{print $$3}'
 vms=freebsd-cc void-cc win10-ltsc
 
 # Installation vars
@@ -30,6 +30,19 @@ ssh $< "cd my_timers && cargo build $(rustflags) --target $@ | $(prefix)"
 rm -rf target/$@
 rsync $(rsync-flags) -r $<:my_timers/target/$@ target/
 $(pack)
+endef
+
+# Make a NSIS Windows installer
+define makensis
+$(call start-vm,$<)
+$(call poll-vm,$<)
+rsync $(rsync-flags) -r installer/* README.md $<:my_timers/installer/
+rsync $(rsync-flags) LICENSE $<:my_timers/installer/LICENSE.txt
+ssh $< "cd my_timers; cp target/x86_64-pc-windows-msvc/release/my_timers.exe installer/"
+@# Build installer
+ssh $< "cd my_timers/installer; makensis.exe my_timers.nsi"
+@# Copy to release directory
+rsync $(rsync-flags) $<:my_timers/installer/my_timers-v$(shell $(display-version))-installer-x86_64.exe release/
 endef
 
 # Package a release
@@ -70,13 +83,10 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 
-nsis: win10-ltsc README.md LICENSE installer/my_timers.nsi installer/*.nsh
-	df | grep /mnt/$< || mount /mnt/$<
-	cp installer/my_timers.nsi installer/*.nsh /mnt/$</NSIS/my_timers/
-	cp README.md /mnt/$</NSIS/my_timers/
-	cp LICENSE /mnt/$</NSIS/my_timers/LICENSE.txt
-	ssh $< "cp ~/my_timers/target/x86_64-pc-windows-msvc/release/my_timers.exe ~/Desktop/Shared/NSIS/my_timers/"
-	ssh $< "cd ~/Desktop/Shared/NSIS/my_timers; makensis.exe my_timers.nsi"
+# Warning: this rule should only be called immediately after the
+# x86_64-pc-windows-msvc target is built
+nsis: win10-ltsc
+	$(makensis)
 .PHONY: nsis
 
 local: x86_64-unknown-linux-gnu
@@ -94,6 +104,7 @@ x86_64-unknown-freebsd: freebsd-cc
 
 x86_64-pc-windows-msvc: win10-ltsc
 	$(cc)
+	$(makensis)
 
 clean-local:
 	rm -rf target release
@@ -114,6 +125,6 @@ shutdown-vms: $(vms)
 clean-vms: $(vms)
 	$(foreach vm,$(vms),ssh $(vm) "rm -rf my_timers";)
 
-clean: clean-local start-vms poll-vms .WAIT clean-vms .WAIT shutdown-vms
+clean: clean-local start-vms poll-vms .WAIT clean-vms
 
 .PHONY: all local install uninstall $(vms) $(targets) clean-local start-vms poll-vms shutdown-vms clean-vms clean
