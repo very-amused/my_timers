@@ -68,7 +68,12 @@ define shutdown-vm
 sudo virsh shutdown $1 || true
 endef
 
-all: clean-local .WAIT $(targets)
+.PHONY: $(vms) $(targets)
+
+all: clean .WAIT $(targets)
+.PHONY: all
+
+release: all .WAIT nsis
 
 install: my_timers README.md LICENSE
 	install -d $(DESTDIR)$(PREFIX)/bin
@@ -77,54 +82,62 @@ install: my_timers README.md LICENSE
 	install -m644 README.md $(DESTDIR)$(DATADIR)/doc/my_timers/README.md
 	install -d $(DESTDIR)$(DATADIR)/licenses/my_timers
 	install -m644 LICENSE $(DESTDIR)$(DATADIR)/licenses/my_timers/LICENSE
+.PHONY: install
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/doc/my_timers
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
-
-# Warning: this rule should only be called immediately after the
-# x86_64-pc-windows-msvc target is built
-nsis: win10-ltsc
-	$(makensis)
-.PHONY: nsis
+.PHONY: uninstall
 
 local: x86_64-unknown-linux-gnu
+.PHONY: local
 
 x86_64-unknown-linux-gnu:
 	cargo build $(rustflags) --target $@ | $(prefix)
 	cp target/$@/release/my_timers my_timers
 	$(pack)
+.PHONY: x86_64-unknown-linux-gnu
 
 x86_64-unknown-linux-musl: void-cc
 	$(cc)
+.PHONY: x86_64-unknown-linux-musl
 
 x86_64-unknown-freebsd: freebsd-cc
 	$(cc)
+.PHONY: x86_64-unknown-freebsd
 
 x86_64-pc-windows-msvc: win10-ltsc
 	$(cc)
-	$(makensis)
+.PHONY: x86_64-pc-windows-msvc
 
-clean-local:
+nsis: win10-ltsc
+	$(makensis)
+.PHONY: nsis
+
+clean:
 	rm -rf target release
+.PHONY: clean
 
 # Start all VMs
 start-vms: $(vms)
 	$(foreach vm,$(vms),$(call start-vm,$(vm));)
+.PHONY: start-vms
 
 # Poll for all VMs to start
 poll-vms: $(vms)
 	$(foreach vm,$(vms),$(call poll-vm,$(vm));)
+.PHONY: poll-vms
 
 # Shutdown all VMs
 shutdown-vms: $(vms)
 	$(foreach vm,$(vms),$(call shutdown-vm,$(vm));)
+.PHONY: shutdown-vms
 
 # Clean all VMs
 clean-vms: $(vms)
 	$(foreach vm,$(vms),ssh $(vm) "rm -rf my_timers";)
+.PHONY: clean-vms
 
-clean: clean-local start-vms poll-vms .WAIT clean-vms
-
-.PHONY: all local install uninstall $(vms) $(targets) clean-local start-vms poll-vms shutdown-vms clean-vms clean
+clean-all: clean start-vms poll-vms .WAIT clean-vms
+.PHONY: clean-all
