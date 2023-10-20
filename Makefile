@@ -73,7 +73,7 @@ endef
 all: clean .WAIT $(targets)
 .PHONY: all
 
-release: all .WAIT nsis
+release: all .WAIT nsis-signed
 
 install: my_timers README.md LICENSE
 	install -d $(DESTDIR)$(PREFIX)/bin

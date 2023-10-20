@@ -25,10 +25,21 @@ OutFile "my_timers-v${DISPLAY_VERSION}-installer-x86_64.exe"
 InstallDir "$PROGRAMFILES64\my_timers"
 ShowInstDetails show
 
+
 !ifdef SIGN_INSTALLER
-#!finalize 
-#!uninstfinalize
-!error "Installer will be signed"
+!define SIGNTOOL_PATH "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64"
+!define CERTIFICATE_THUMBPRINT "100c561b3e5d54a8b43d4c0cb02d4c2b97166586"
+
+!uninstfinalize '"${SIGNTOOL_PATH}\signtool.exe" sign \
+		/fd sha256 \
+		/tr http://ts.ssl.com /td sha256 \
+		/sha1 "${CERTIFICATE_THUMBPRINT}" \
+		"%1"' = 0
+!finalize '"${SIGNTOOL_PATH}\signtool.exe" sign \
+		/fd sha256 \
+		/tr http://ts.ssl.com /td sha256 \
+		/sha1 "${CERTIFICATE_THUMBPRINT}" \
+		"%1"' = 0
 !endif
 
 Function pathPage
