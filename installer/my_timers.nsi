@@ -25,6 +25,12 @@ OutFile "my_timers-v${DISPLAY_VERSION}-installer-x86_64.exe"
 InstallDir "$PROGRAMFILES64\my_timers"
 ShowInstDetails show
 
+!ifdef SIGN_INSTALLER
+#!finalize 
+#!uninstfinalize
+!error "Installer will be signed"
+!endif
+
 Function pathPage
 	!insertmacro MUI_HEADER_TEXT "Add to PATH" "Choose options affecting your PATH."
 	nsDialogs::Create 1018

@@ -40,7 +40,7 @@ rsync $(rsync-flags) -r installer/* README.md $<:my_timers/installer/
 rsync $(rsync-flags) LICENSE $<:my_timers/installer/LICENSE.txt
 ssh $< "cd my_timers; cp target/x86_64-pc-windows-msvc/release/my_timers.exe installer/"
 @# Build installer
-ssh $< "cd my_timers/installer; makensis.exe my_timers.nsi"
+ssh $< "cd my_timers/installer; makensis.exe $(nsis-flags) my_timers.nsi"
 @# Copy to release directory
 rsync $(rsync-flags) $<:my_timers/installer/my_timers-v$(shell $(display-version))-installer-x86_64.exe release/
 endef
@@ -114,6 +114,11 @@ x86_64-pc-windows-msvc: win10-ltsc
 nsis: win10-ltsc
 	$(makensis)
 .PHONY: nsis
+
+nsis-signed: nsis-flags=-DSIGN_INSTALLER
+nsis-signed: win10-ltsc
+	$(makensis)
+.PHONY: nsis-signed
 
 clean:
 	rm -rf target release
