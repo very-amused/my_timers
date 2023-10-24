@@ -24,8 +24,14 @@ pub fn args() -> Args {
 	for (i, arg) in args.iter().enumerate() {
 		match arg.as_str() {
 			"-h" | "--help" => {
-				const USAGE: &str = "my_timers [-c/--config /path/to/config.json] [-e/--events /path/to/events.conf] [-v/--verbose] [-h/--help]";
+				const USAGE: &str = "my_timers [-c/--config /path/to/config.json] [-e/--events /path/to/events.conf] [-v/--verbose] [-h/--help] [-V/--version]";
 				println!("{}", "Usage:".to_owned() + "\n\t" + USAGE);
+				exit(0);
+			},
+			"-V" | "--version" => {
+				const VERSION: &str = env!("CARGO_PKG_VERSION");
+				const COMMIT_HASH: &str = env!("COMMIT_HASH");
+				println!("my_timers v{} (built from commit {})", VERSION, COMMIT_HASH);
 				exit(0);
 			},
 			"-v" | "--verbose" => {
