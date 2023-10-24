@@ -1,12 +1,14 @@
 use std::{path::Path, io::Write};
 
 use serde::Deserialize;
-use tracing_appender::{non_blocking, non_blocking::{WorkerGuard, NonBlocking}, rolling};
+use tracing_appender::{non_blocking, non_blocking::WorkerGuard, rolling};
 use tracing_subscriber::{Layer, registry};
 use tracing_subscriber::prelude::*;
 
 mod time_format;
 mod filter;
+#[macro_use]
+mod format;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -49,17 +51,6 @@ pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
 /// Guarded tracing layer for non-blocking write threads
 pub trait GuardedRegLayer { 
 	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>);
-}
-
-/// Apply consistent formatting to output layers
-fn fmt_layer<S>(writer: NonBlocking) -> BoxedLayer<S>
-where S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>
-{
-	tracing_subscriber::fmt::layer()
-		.with_writer(writer)
-		.with_timer(time_format::timer())
-		.with_target(false)
-		.boxed()
 }
 
 fn default_enabled() -> bool {
@@ -118,7 +109,9 @@ impl GuardedRegLayer for FileConfig {
 			}
 		}
 		let (non_blocking, _guard) = non_blocking(file_appender);
-		(Some(fmt_layer(non_blocking)), Some(_guard))
+		let fmt = format::fmt();
+		let fmt = config_fmt!(fmt);
+		(Some(format::fmt_layer(non_blocking, fmt)), Some(_guard))
 	}
 }
 
@@ -152,6 +145,8 @@ impl GuardedRegLayer for StdioConfig {
 			}
 		};
 		let (non_blocking, _guard) = non_blocking(stream);	
-		(Some(fmt_layer(non_blocking)), Some(_guard))
+		let fmt = format::fmt();
+		let fmt = config_fmt!(fmt);
+		(Some(format::fmt_layer(non_blocking, fmt)), Some(_guard))
 	}
 }
