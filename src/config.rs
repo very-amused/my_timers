@@ -11,6 +11,7 @@ pub struct Config {
 
 pub fn parse(path: &str) -> Result<Config, Box<dyn Error>> {
 	let config_file = File::open(path)?;
-	let config: Config = serde_json::from_reader(config_file)?;
+	let mut config: Config = serde_json::from_reader(config_file)?;
+	config.log.init_format_opts();
 	Ok(config)
 }

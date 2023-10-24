@@ -47,6 +47,10 @@ while `log` configures how my_timers records event runs via logs/traces.
   },
 
   "log": {
+		// Global log format, overrides per-destination format options
+		// (optional, values: "default", "pretty", "compact")
+		"format": "pretty",
+
     // Output to logfile(s), with optional periodic rotation
     "file": {
       // All log destinations can be enabled/disabled with the `enabled` option.
@@ -54,6 +58,10 @@ while `log` configures how my_timers records event runs via logs/traces.
       // the destination will be enabled
       // (optional, default: true)
       "enabled": true,
+
+			// Log output format
+			// (optional, values: "default", "pretty", "compact", default: "default")
+			"format": "default",
 
       // The absolute path of the file logs will be written to.
       // If `rotation` is "never", this is the path of a single file that all logs will be written to.
@@ -72,6 +80,10 @@ while `log` configures how my_timers records event runs via logs/traces.
     "stdio": {
       // (optional, default: true)
       "enabled": true,
+
+			// Log output format
+			// (optional, values: "default", "pretty", "compact", default: "default")
+			"format": "default",
 
       // The output stream logs will be written to
       // (optional, values: "stdout"|"stderr", default: "stdout")
