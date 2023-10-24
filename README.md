@@ -47,8 +47,8 @@ while `log` configures how my_timers records event runs via logs/traces.
   },
 
   "log": {
-		// Global log format, overrides per-destination format options
-		// (optional, values: "default", "pretty", "compact")
+		// Global log format, overrides per-destination format options.
+		// (optional, values: "normal", "pretty", "pretty_fields", "compact", "json", default: None)
 		"format": "pretty",
 
     // Output to logfile(s), with optional periodic rotation
@@ -60,7 +60,7 @@ while `log` configures how my_timers records event runs via logs/traces.
       "enabled": true,
 
 			// Log output format
-			// (optional, values: "default", "pretty", "compact", default: "default")
+			// (optional, values: "default", "pretty", "pretty_fields", "compact", "json", default: "default")
 			"format": "default",
 
       // The absolute path of the file logs will be written to.
@@ -82,7 +82,7 @@ while `log` configures how my_timers records event runs via logs/traces.
       "enabled": true,
 
 			// Log output format
-			// (optional, values: "default", "pretty", "compact", default: "default")
+			// (optional, values: "default", "pretty", "pretty_fields", "compact", "json", default: "pretty")
 			"format": "default",
 
       // The output stream logs will be written to

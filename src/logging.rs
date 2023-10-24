@@ -151,6 +151,7 @@ impl GuardedRegLayer for FileConfig {
 pub struct StdioConfig {
 	#[serde(default = "default_enabled")]
 	enabled: bool,
+	#[serde(default = "StdioConfig::default_format")]
 	format: Option<String>,
 	global_format: Option<String>,
 	#[serde(default = "StdioConfig::default_stream")]
@@ -158,6 +159,9 @@ pub struct StdioConfig {
 }
 
 impl StdioConfig {
+	fn default_format() -> Option<String> {
+		Some("pretty".to_string())
+	}
 	fn default_stream() -> String {
 		"stdout".to_string()
 	}
