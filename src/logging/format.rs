@@ -39,8 +39,6 @@ where S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>
 	if let Some(config_format) = config_format {
 		match config_format {
 			"pretty" => fmt_layer!(writer,_guard,fmt().pretty(),format::PrettyFields::new()),
-			// Default log format w/ pretty field format
-			"pretty_fields" => fmt_layer!(writer,_guard,fmt(),format::PrettyFields::new()),
 			"compact" => fmt_layer!(writer,_guard,fmt().compact(),format::DefaultFields::new()),
 			"json" => fmt_layer!(writer,_guard,fmt().json(),format::JsonFields::new()),
 			_ => fmt_layer!(writer,_guard,fmt(),format::DefaultFields::new())
