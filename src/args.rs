@@ -25,13 +25,14 @@ pub fn args() -> Args {
 		match arg.as_str() {
 			"-h" | "--help" => {
 				const USAGE: &str = "my_timers [-c/--config /path/to/config.json] [-e/--events /path/to/events.conf] [-v/--verbose] [-h/--help] [-V/--version]";
-				println!("{}", "Usage:".to_owned() + "\n\t" + USAGE);
+				println!("{}", "Usage:".to_string() + "\n\t" + USAGE);
 				exit(0);
 			},
 			"-V" | "--version" => {
 				const VERSION: &str = env!("CARGO_PKG_VERSION");
 				const COMMIT_HASH: &str = env!("COMMIT_HASH");
-				println!("my_timers v{} (built from commit {})", VERSION, COMMIT_HASH);
+				const BUILD_DATE: &str = env!("BUILD_DATE");
+				println!("my_timers v{}\n\tbuilt {} from commit {}\n\tCopyright (c) 2022-2023 Keith Scroggs <very-amused>", VERSION, BUILD_DATE, COMMIT_HASH);
 				exit(0);
 			},
 			"-v" | "--verbose" => {
@@ -64,7 +65,7 @@ pub fn args() -> Args {
 
 	Args {
 		verbose,
-		config_path: if let Some(path) = config_path { path } else { CONFIG_PATH_DEFAULT.to_owned() },
-		events_path: if let Some(path) = events_path { path } else { EVENTS_PATH_DEFAULT.to_owned() }
+		config_path: if let Some(path) = config_path { path } else { CONFIG_PATH_DEFAULT.to_string() },
+		events_path: if let Some(path) = events_path { path } else { EVENTS_PATH_DEFAULT.to_string() }
 	}
 }
