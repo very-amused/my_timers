@@ -99,13 +99,14 @@ Comments begin with `#`, any text on the line after this character is ignored.
 
 Events are composed of a *name*, an *interval*, and a *body*:
 ```
-# A comment
+# Comments can be placed above events or in the event bodies.
+# Comments above intervals are the recommended placement due to clarity.
 name:
 interval
-  some sql statement; # Comments can be placed in the event body, but this is not recommended
+  some sql statement;
   another sql statement;
 
-# Same-line intervals are permitted but not recommended, as they hurt clarity
+# Same-line interval definitions are permitted but not recommended due to clarity.
 name: interval
   statement;
 ```
