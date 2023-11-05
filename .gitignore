@@ -5,3 +5,4 @@ log/
 /my_timers
 release
 pkg/**
+installer/git-hash

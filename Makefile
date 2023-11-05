@@ -4,13 +4,15 @@
 # Build vars
 rustflags=--release --quiet --message-format json
 rsync-flags=-h --size-only --info=progress2
-src=src Cargo.toml Cargo.lock .cargo
+src=src build.rs Cargo.toml Cargo.lock .cargo installer
 targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd x86_64-pc-windows-msvc
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
 display-version=grep DISPLAY_VERSION installer/version.nsh | awk '{print $$3}'
 vms=freebsd-cc void-cc win10-ltsc
+git-hash=installer/git-hash
+$(shell git rev-parse --short HEAD > $(git-hash))
 
 # Installation vars
 ifndef PREFIX
@@ -36,7 +38,7 @@ endef
 define makensis
 $(call start-vm,$<)
 $(call poll-vm,$<)
-rsync $(rsync-flags) -r installer/* README.md $<:my_timers/installer/
+rsync $(rsync-flags) README.md $<:my_timers/installer/
 rsync $(rsync-flags) LICENSE $<:my_timers/installer/LICENSE.txt
 ssh $< "cd my_timers; cp target/x86_64-pc-windows-msvc/release/my_timers.exe installer/"
 @# Build installer

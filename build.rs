@@ -3,17 +3,25 @@ use chrono::Local;
 
 fn main() -> Result<(), Box<dyn Error>> {
 	// Provide git commit hash
-	println!("cargo:rustc-rerun-if-changed=.git/HEAD");
-	let git_head = fs::read_to_string(".git/HEAD")?;
-	if git_head.starts_with("ref:") {
-		if let Some(head_path) = git_head.split_ascii_whitespace().last() {
-			if head_path.starts_with("refs") {
-				println!("cargo:rustc-rerun-if-changed=.git/{}", head_path);
+	let commit_hash: String;
+	if cfg!(debug) {
+		println!("cargo:rustc-rerun-if-changed=.git/HEAD");
+		let git_head = fs::read_to_string(".git/HEAD")?;
+		if git_head.starts_with("ref:") {
+			if let Some(head_path) = git_head.split_ascii_whitespace().last() {
+				if head_path.starts_with("refs") {
+					println!("cargo:rustc-rerun-if-changed=.git/{}", head_path);
+				}
 			}
 		}
+		let cmd = Command::new("git").args(&["rev-parse", "--short", "HEAD"]).output()?;	
+		commit_hash = String::from_utf8(cmd.stdout)?;
+	} else {
+		const GIT_HASH_PATH: &str = "installer/git-hash";
+		println!("cargo:rustc-rerun-if-changed={}", GIT_HASH_PATH);
+		// Use installer/git-hash to get commit hash in release builds
+		commit_hash = fs::read_to_string(GIT_HASH_PATH)?;
 	}
-	let cmd = Command::new("git").args(&["rev-parse", "--short", "HEAD"]).output()?;	
-	let commit_hash = String::from_utf8(cmd.stdout)?;
 	println!("cargo:rustc-env=COMMIT_HASH={}", commit_hash);
 
 	// Provide build date
