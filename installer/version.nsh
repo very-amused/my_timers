@@ -1,1 +1,1 @@
-!define DISPLAY_VERSION 0.2.0
+!define DISPLAY_VERSION 0.2.1
