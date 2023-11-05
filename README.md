@@ -63,6 +63,11 @@ while `log` configures how my_timers records event runs via logs/traces.
 			// (optional, values: "default", "pretty", "compact", "json", default: "default")
 			"format": "default",
 
+			// Colorized logging output using ANSI escape codes.
+			// Use `less -R` or a `less -R` analog to display log files with color
+			// (optional, default: false)
+			"color": false,
+
       // The absolute path of the file logs will be written to.
       // If `rotation` is "never", this is the path of a single file that all logs will be written to.
       // Otherwise, this path serves as a prefix for the creation of rotated log files over time
@@ -84,6 +89,10 @@ while `log` configures how my_timers records event runs via logs/traces.
 			// Log output format
 			// (optional, values: "default", "pretty", "compact", "json", default: "pretty")
 			"format": "default",
+
+			// Colorized logging output using ANSI escape codes.
+			// (optional, default: false)
+			"color": false,
 
       // The output stream logs will be written to
       // (optional, values: "stdout"|"stderr", default: "stdout")

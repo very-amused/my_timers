@@ -16,7 +16,8 @@ pub struct Config {
 	stdio: Option<StdioConfig>
 }
 
-pub trait LogFormat {
+/// Logging output targets with configurable formatting
+pub trait LogOutput {
 	/// Return the log format which should be used for the destination, respecting format option
 	/// hierarchy
 	fn get_format(&self) -> Option<&str>;
@@ -67,7 +68,7 @@ impl Config {
 pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
 
 /// Guarded tracing layer for non-blocking write threads
-pub trait GuardedRegLayer : LogFormat { 
+pub trait GuardedRegLayer : LogOutput { 
 	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>);
 }
 
@@ -82,6 +83,8 @@ pub struct FileConfig {
 	enabled: bool,
 	format: Option<String>,
 	global_format: Option<String>,
+	#[serde(default = "FileConfig::default_color")]
+	color: bool,
 	path: String,
 	#[serde(default = "FileConfig::default_rotation")]
 	rotation: String
@@ -91,9 +94,12 @@ impl FileConfig {
 	fn default_rotation() -> String {
 		"daily".into()
 	}
+	const fn default_color() -> bool {
+		false
+	}
 }
 
-impl LogFormat for FileConfig {
+impl LogOutput for FileConfig {
 	fn get_format(&self) -> Option<&str> {
 		if let Some(fmt) = &self.global_format {
 			Some(fmt)
@@ -142,7 +148,7 @@ impl GuardedRegLayer for FileConfig {
 		}
 		let (non_blocking, _guard) = non_blocking(file_appender);
 		// Apply formatting
-		format::guarded_fmt_layer(non_blocking, _guard, self.get_format())
+		format::guarded_fmt_layer(non_blocking, _guard, self.get_format(), self.color)
 	}
 }
 
@@ -154,6 +160,8 @@ pub struct StdioConfig {
 	#[serde(default = "StdioConfig::default_format")]
 	format: Option<String>,
 	global_format: Option<String>,
+	#[serde(default = "StdioConfig::default_color")]
+	color: bool,
 	#[serde(default = "StdioConfig::default_stream")]
 	stream: String
 }
@@ -165,9 +173,12 @@ impl StdioConfig {
 	fn default_stream() -> String {
 		"stdout".to_string()
 	}
+	const fn default_color() -> bool {
+		true
+	}
 }
 
-impl LogFormat for StdioConfig {
+impl LogOutput for StdioConfig {
 	fn get_format(&self) -> Option<&str> {
 		if let Some(fmt) = &self.global_format {
 			Some(fmt)
@@ -195,6 +206,6 @@ impl GuardedRegLayer for StdioConfig {
 		};
 		let (non_blocking, _guard) = non_blocking(stream);
 		// Apply formatting
-		format::guarded_fmt_layer(non_blocking, _guard, self.get_format())
+		format::guarded_fmt_layer(non_blocking, _guard, self.get_format(), self.color)
 	}
 }
