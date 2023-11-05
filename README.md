@@ -47,10 +47,6 @@ while `log` configures how my_timers records event runs via logs/traces.
   },
 
   "log": {
-		// Global log format, overrides per-destination format options.
-		// (optional, values: "normal", "pretty", "compact", "json", default: None)
-		"format": "pretty",
-
     // Output to logfile(s), with optional periodic rotation
     "file": {
       // All log destinations can be enabled/disabled with the `enabled` option.

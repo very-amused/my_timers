@@ -34,17 +34,13 @@ macro_rules! fmt_layer {
 }
 
 /// Create a guarded formatting layer
-pub fn guarded_fmt_layer<S>(writer: NonBlocking, _guard: WorkerGuard, config_format: Option<&str>, config_color: bool) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>)
+pub fn guarded_fmt_layer<S>(writer: NonBlocking, _guard: WorkerGuard, config_format: &str, config_color: bool) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>)
 where S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>
 {
-	if let Some(config_format) = config_format {
-		match config_format {
-			"pretty" => fmt_layer!(writer,_guard,fmt().pretty(),format::PrettyFields::new(),config_color),
-			"compact" => fmt_layer!(writer,_guard,fmt().compact(),format::DefaultFields::new(),config_color),
-			"json" => fmt_layer!(writer,_guard,fmt().json(),format::JsonFields::new(),config_color),
-			_ => fmt_layer!(writer,_guard,fmt(),format::DefaultFields::new(),config_color)
-		}
-	} else {
-		fmt_layer!(writer,_guard,fmt(),format::DefaultFields::new(),config_color)
+	match config_format {
+		"pretty" => fmt_layer!(writer,_guard,fmt().pretty(),format::PrettyFields::new(),config_color),
+		"compact" => fmt_layer!(writer,_guard,fmt().compact(),format::DefaultFields::new(),config_color),
+		"json" => fmt_layer!(writer,_guard,fmt().json(),format::JsonFields::new(),config_color),
+		_ => fmt_layer!(writer,_guard,fmt(),format::DefaultFields::new(),config_color)
 	}
 }

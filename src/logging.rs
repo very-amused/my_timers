@@ -11,16 +11,8 @@ mod format;
 
 #[derive(Deserialize)]
 pub struct Config {
-	format: Option<String>,
 	file: Option<FileConfig>,
 	stdio: Option<StdioConfig>
-}
-
-/// Logging output targets with configurable formatting
-pub trait LogOutput {
-	/// Return the log format which should be used for the destination, respecting format option
-	/// hierarchy
-	fn get_format(&self) -> Option<&str>;
 }
 
 impl Config {
@@ -51,24 +43,12 @@ impl Config {
 			.init();
 		_guards
 	}
-
-	/// Copy the global format option to be referred to by destination configs
-	pub fn init_format_opts(&mut self) {
-		if let Some(global_format) = &self.format {
-			if let Some(file) = &mut self.file {
-				file.global_format = Some(global_format.into());
-			}
-			if let Some(stdio) = &mut self.stdio {
-				stdio.global_format = Some(global_format.into());
-			}
-		}
-	}
 }
 
 pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
 
 /// Guarded tracing layer for non-blocking write threads
-pub trait GuardedRegLayer : LogOutput { 
+pub trait GuardedRegLayer { 
 	fn layer<S: tracing::Subscriber + for<'a> registry::LookupSpan<'a>>(&self) -> (Option<BoxedLayer<S>>, Option<WorkerGuard>);
 }
 
@@ -81,8 +61,8 @@ const fn default_enabled() -> bool {
 pub struct FileConfig {
 	#[serde(default = "default_enabled")]
 	enabled: bool,
-	format: Option<String>,
-	global_format: Option<String>,
+	#[serde(default = "FileConfig::default_format")]
+	format: String,
 	#[serde(default = "FileConfig::default_color")]
 	color: bool,
 	path: String,
@@ -92,22 +72,13 @@ pub struct FileConfig {
 
 impl FileConfig {
 	fn default_rotation() -> String {
-		"daily".into()
+		"daily".to_string()
+	}
+	fn default_format() -> String {
+		"default".to_string()
 	}
 	const fn default_color() -> bool {
 		false
-	}
-}
-
-impl LogOutput for FileConfig {
-	fn get_format(&self) -> Option<&str> {
-		if let Some(fmt) = &self.global_format {
-			Some(fmt)
-		}	else if let Some(fmt) = &self.format {
-			Some(fmt)
-		} else {
-			None
-		}
 	}
 }
 
@@ -148,7 +119,7 @@ impl GuardedRegLayer for FileConfig {
 		}
 		let (non_blocking, _guard) = non_blocking(file_appender);
 		// Apply formatting
-		format::guarded_fmt_layer(non_blocking, _guard, self.get_format(), self.color)
+		format::guarded_fmt_layer(non_blocking, _guard, &self.format, self.color)
 	}
 }
 
@@ -158,8 +129,7 @@ pub struct StdioConfig {
 	#[serde(default = "default_enabled")]
 	enabled: bool,
 	#[serde(default = "StdioConfig::default_format")]
-	format: Option<String>,
-	global_format: Option<String>,
+	format: String,
 	#[serde(default = "StdioConfig::default_color")]
 	color: bool,
 	#[serde(default = "StdioConfig::default_stream")]
@@ -167,26 +137,14 @@ pub struct StdioConfig {
 }
 
 impl StdioConfig {
-	fn default_format() -> Option<String> {
-		Some("pretty".to_string())
-	}
 	fn default_stream() -> String {
 		"stdout".to_string()
 	}
+	fn default_format() -> String {
+		"pretty".to_string()
+	}
 	const fn default_color() -> bool {
 		true
-	}
-}
-
-impl LogOutput for StdioConfig {
-	fn get_format(&self) -> Option<&str> {
-		if let Some(fmt) = &self.global_format {
-			Some(fmt)
-		} else if let Some(fmt) = &self.format {
-			Some(fmt)
-		} else {
-			None
-		}
 	}
 }
 
@@ -206,6 +164,6 @@ impl GuardedRegLayer for StdioConfig {
 		};
 		let (non_blocking, _guard) = non_blocking(stream);
 		// Apply formatting
-		format::guarded_fmt_layer(non_blocking, _guard, self.get_format(), self.color)
+		format::guarded_fmt_layer(non_blocking, _guard, &self.format, self.color)
 	}
 }
