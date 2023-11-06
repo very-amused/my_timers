@@ -13,6 +13,7 @@ display-version=grep DISPLAY_VERSION installer/version.nsh | awk '{print $$3}'
 vms=freebsd-cc void-cc win10-ltsc
 git-hash=installer/git-hash
 $(shell git rev-parse --short HEAD > $(git-hash))
+$(shell echo $(@))
 
 # Installation vars
 ifndef PREFIX
