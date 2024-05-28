@@ -202,7 +202,6 @@ pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Pin<Box<Ev
 		// Displayable events
 		let mut d_events: Vec<String> = Vec::with_capacity(events.len());
 		for evt in &events {
-			let evt = evt.clone();
 			d_events.push(format!("{}", evt));
 		}
 		event!(Level::TRACE, "Loaded events:\n\t{}", d_events.join("\n\t"));
