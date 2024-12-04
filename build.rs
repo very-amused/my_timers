@@ -4,7 +4,7 @@ use chrono::Local;
 fn main() -> Result<(), Box<dyn Error>> {
 	// Provide git commit hash
 	let commit_hash: String;
-	if cfg!(debug) {
+	if cfg!(debug_assertions) {
 		println!("cargo:rustc-rerun-if-changed=.git/HEAD");
 		let git_head = fs::read_to_string(".git/HEAD")?;
 		if git_head.starts_with("ref:") {
