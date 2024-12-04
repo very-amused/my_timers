@@ -6,7 +6,6 @@ rustflags=--release --quiet --message-format json
 rsync-flags=-h --size-only --info=progress2
 src=src build.rs Cargo.toml Cargo.lock .cargo installer
 targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd x86_64-pc-windows-msvc
-host-target=$(shell rustc -vV | grep host | awk '{print $$2}')
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
@@ -94,7 +93,7 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 .PHONY: uninstall
 
-local: $(host-target)
+local: x86_64-unknown-linux-gnu
 .PHONY: local
 
 x86_64-unknown-linux-gnu:
