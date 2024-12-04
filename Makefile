@@ -6,10 +6,11 @@ rustflags=--release --quiet --message-format json
 rsync-flags=-h --size-only --info=progress2
 src=src build.rs Cargo.toml Cargo.lock .cargo installer
 targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd x86_64-pc-windows-msvc
+host-target=$(shell rustc -vV | grep host | awk '{print $$2}')
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
-display-version=grep DISPLAY_VERSION installer/version.nsh | awk '{print $$3}'
+display-version=$(shell grep DISPLAY_VERSION installer/version.nsh | awk '{print $$3}')
 vms=freebsd-cc void-cc win10-ltsc
 git-hash=installer/git-hash
 $(shell git rev-parse --short HEAD > $(git-hash))
@@ -45,7 +46,7 @@ ssh $< "cd my_timers; cp target/x86_64-pc-windows-msvc/release/my_timers.exe ins
 @# Build installer
 ssh $< "cd my_timers/installer; makensis.exe $(nsis-flags) my_timers.nsi"
 @# Copy to release directory
-rsync $(rsync-flags) $<:my_timers/installer/my_timers-v$(shell $(display-version))-installer-x86_64.exe release/
+rsync $(rsync-flags) $<:my_timers/installer/my_timers-v$(display-version)-installer-x86_64.exe release/
 endef
 
 # Package a release
@@ -93,7 +94,7 @@ uninstall:
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/my_timers
 .PHONY: uninstall
 
-local: x86_64-unknown-linux-gnu
+local: $(host-target)
 .PHONY: local
 
 x86_64-unknown-linux-gnu:
