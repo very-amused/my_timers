@@ -12,6 +12,7 @@ pub struct Config {
 
 impl Config {
 	fn validate(&mut self) -> Result<(), DBConfigError> {
+		self.db.set_default_address();
 		self.db.validate()
 	}
 }

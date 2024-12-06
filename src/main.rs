@@ -1,8 +1,8 @@
-use std::{error::Error, time::Duration, sync};
+use std::{error::Error, time::Duration};
 use chrono::{Timelike, Local};
 use tokio::{time, task::JoinSet, signal as tokio_signal};
 use tracing::{event, Level, span, Instrument, instrument};
-use sqlx::{Pool, AnyPool};
+use sqlx::AnyPool;
 
 mod config;
 mod db;
@@ -65,9 +65,57 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		Some(_) = &mut sigterm => return shutdown(None, pool).await
 	};
 
-	tokio::select! {
-		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await,
-		Some(_) = &mut sigterm => return shutdown(None, pool).await
+	// Initialize task joinset
+	let mut event_threads = JoinSet::<()>::new();
+
+	// Immediately run @startup events
+	event!(Level::INFO, "Running @startup events");
+	for evt in &events {
+		if evt.interval.startup {
+			let pool = pool.clone();
+			let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
+			event_threads.spawn(async move {
+				evt.run(pool).await.ok();
+			});
+		}
+	}
+
+	// Wait until next minute at 00 seconds to start event loop
+	let mut interval = {
+		let mut to_minute = time::interval(to_next_minute());
+		to_minute.tick().await;
+		event!(Level::INFO, "Starting event loop in {:?}", to_minute.period());
+		tokio::select! {
+			_ = to_minute.tick() => {
+				// Start minute interval ticker
+				time::interval(Duration::from_secs(60))
+			},
+			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await,
+			Some(_) = &mut sigterm => return shutdown(Some(event_threads), pool).await
+		}
+	};
+	event!(parent: None, Level::INFO, "Starting event loop");
+
+	// Event loop
+	loop {
+		// Wait for the next minute, breaking the loop if a signal is caught
+		tokio::select! {
+			_ = interval.tick() => {},
+			Ok(_) = &mut ctrl_c => return shutdown(Some(event_threads), pool).await,
+			Some(_) = &mut sigterm => return shutdown(Some(event_threads), pool).await
+		}
+		// Iterate through each event, run the ones that match
+		let now = Local::now();
+		for evt in &events {
+			if evt.interval.match_time(&now) {
+				let pool = pool.clone();
+				let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
+				event_threads.spawn(async move {
+					// Error logging is handled in the event's tracing span
+					evt.run(pool).await.ok();
+				});	
+			}
+		}
 	}
 }
 

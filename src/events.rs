@@ -1,7 +1,5 @@
 use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::{VecDeque, HashSet}, fmt::Display, pin::Pin};
 
-use mysql_async::{self, TxOpts};
-use mysql_async::prelude::*;
 use sqlx::{AnyPool, Executor};
 use tracing::{instrument, event, Level, span, Instrument};
 use lazy_static::lazy_static;
@@ -71,24 +69,21 @@ impl Event {
 	/// Run an event's SQL body on a transaction,
 	/// only committing the results if all statements succeed
 	#[instrument(skip_all, fields(event = %self, interval = %self.interval), err)]
-	pub async fn run(&self, pool: mysql_async::Pool) -> Result<(), mysql_async::Error> {
+	pub async fn run(&self, pool: AnyPool) -> Result<(), sqlx::Error> {
 		// Start a transaction to run the event on
-		let mut conn = pool.get_conn().await?;
-		event!(Level::INFO, "Running event on conn {}", conn.id());
-		let mut tx = conn.start_transaction(TxOpts::default()).await?;
+		event!(Level::INFO, "Running event");
+		let mut tx = pool.begin().await?;
 
 		// Run the event body
 		let mut i: usize = 0;
 		for stmt in &self.body {
 			let span = span!(Level::DEBUG, "Exec", stmt = i,  action = Self::action(stmt));
 			async {
-				tx.exec_drop(stmt, params::Params::Empty).await?;
-				event!(Level::DEBUG, "{} Rows affected", tx.affected_rows());
-				let info = tx.info();
-				if info.len() > 0 {
-					event!(Level::TRACE, "{}", info);
-				}
-				Ok::<(), mysql_async::Error>(())
+				let result = sqlx::query(stmt)
+					.execute(&mut *tx)
+					.await?;
+				event!(Level::DEBUG, "{} Rows affected", result.rows_affected());
+				Ok::<(), sqlx::Error>(())
 			}.instrument(span).await?;
 			i += 1;
 		}
