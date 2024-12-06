@@ -23,6 +23,7 @@ while `log` configures how my_timers records event runs via logs/traces.
 {
   "db": {
     // Name of the database user my_timers will try to connect as
+    // (optional if `driver` is "sqlite")
     "user": "admin",
 
     // Password for the database user
@@ -33,17 +34,25 @@ while `log` configures how my_timers records event runs via logs/traces.
     // (optional, values: "SOCKET"|"TCP", default: "SOCKET")
     "protocol": "TCP",
 
-    // Address of the database server.
+    // Address of the database server/file.
     // Must be an IP address or domain name if `protocol` is "TCP",
-    // or the path of a Unix socket if `protocol` is "SOCKET"
+    // the path of a Unix socket if `protocol` is "SOCKET",
+    // or the path of a sqlite3 database file if `driver` is "sqlite".
     // (optional, default: "/var/run/mysqld/mysqld.sock")
+    // [REQUIRED if `driver` is "sqlite"]
     "address": "db1.myapp.net",
 
     // Name of the database to connect under
+    // (optional if `driver` is "sqlite")
     "database": "MyDatabase",
 
-    // Whether to use TLS when connecting (optional, default: false)
-    "tls": true
+    // Whether to require TLS when connecting
+    // (optional, default: false)
+    "tls": true,
+
+    // Database driver to connect with
+    // (optional, values: "mariadb"|"mysql"|"postgres"|"sqlite", default: "mariadb")
+    "driver": "mariadb"
   },
 
   "log": {

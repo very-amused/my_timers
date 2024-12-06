@@ -1,5 +1,10 @@
 use mysql_async;
 use serde::Deserialize;
+use self::error::DBConfigError;
+use std::collections::HashSet;
+use lazy_static::lazy_static;
+
+pub mod error;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -17,10 +22,35 @@ pub struct Config {
 	pub database: String,
 
 	#[serde(default = "Config::default_tls")]
-	tls: bool
+	tls: bool,
+
+	// Database driver; "mysql"/"mariadb", "postgres", or "sqlite" is supported
+	#[serde(default = "Config::default_driver")]
+	driver: String
 }
 
 impl Config {
+	pub fn validate(&self) -> Result<(), DBConfigError> {
+		lazy_static! {
+			// Valid DB drivers
+			static ref DRIVERS: HashSet<&'static str> = HashSet::from(["mariadb", "mysql", "postgres", "sqlite"]);
+			// Valid connection protocols
+			static ref PROTOCOLS: HashSet<&'static str> = HashSet::from(["TCP", "SOCKET"]);
+		}
+		if !DRIVERS.contains(self.driver.as_str()) {
+			return Err(DBConfigError::InvalidDriver(self.driver.clone()));
+		}
+		if !PROTOCOLS.contains(self.protocol.as_str()) {
+			return Err(DBConfigError::InvalidProtocol(self.protocol.clone()))
+		}
+
+		if self.driver != "sqlite" {
+		}
+
+		Ok(())
+	}
+
+	#[deprecated]
 	pub fn mysql_opts(&self) -> mysql_async::Opts {
 		// Configure user, password, db
 		let mut builder = mysql_async::OptsBuilder::default()
@@ -50,6 +80,9 @@ impl Config {
 		}
 	}
 
+	fn default_driver() -> String {
+		"mariadb".into()
+	}
 	fn default_protocol() -> String {
 		"SOCKET".into()
 	}
