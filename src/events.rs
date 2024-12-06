@@ -2,6 +2,7 @@ use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::{VecDeq
 
 use mysql_async::{self, TxOpts};
 use mysql_async::prelude::*;
+use sqlx::{AnyPool, Executor};
 use tracing::{instrument, event, Level, span, Instrument};
 use lazy_static::lazy_static;
 
@@ -12,7 +13,7 @@ use crate::cron::{self, error::CronParseError};
 pub enum EventParseError {
 	CronParseError(CronParseError),
 	SyntaxError(String),
-	SQLError(mysql_async::Error)
+	SQLError(sqlx::Error)
 }
 
 impl Display for EventParseError {
@@ -36,7 +37,7 @@ pub struct Event {
 }
 
 impl Event {
-	async fn parse(evt_parts: &mut VecDeque<String>, pool: mysql_async::Pool) -> Result<Pin<Box<Event>>, EventParseError> {
+	async fn parse(evt_parts: &mut VecDeque<String>, pool: AnyPool) -> Result<Pin<Box<Event>>, EventParseError> {
 		if evt_parts.len() != 3 {
 			return Err(EventParseError::SyntaxError(format!("{} unexpected number of event tokens (expected {}, received {})",
 				evt_parts.get(1).unwrap_or(&"".into()), 3, evt_parts.len())));
@@ -55,11 +56,9 @@ impl Event {
 			.map(|s| s.trim().replace("\t", "")) // Remove tabs
 			.filter(|s| s.len() > 0).collect();
 
-		let mut conn = pool.get_conn().await
-			.map_err(EventParseError::SQLError)?;
 		while let Some(stmt) = stmts.pop_front() {
 			// Validate SQL stmt
-			conn.prep(&stmt).await
+			pool.prepare(&stmt).await
 				.map_err(EventParseError::SQLError)?;
 			// Push to event body
 			evt.body.push(stmt);
@@ -136,7 +135,7 @@ impl Display for Event {
 }
 
 #[instrument(name = "Parsing events", level = "debug", skip(pool), err)]
-pub async fn parse(path: &str, pool: mysql_async::Pool) -> Result<Vec<Pin<Box<Event>>>, Box<dyn Error>> {
+pub async fn parse(path: &str, pool: AnyPool) -> Result<Vec<Pin<Box<Event>>>, Box<dyn Error>> {
 	event!(Level::DEBUG, "Parsing events");
 	// Open file reader
 	let file = File::open(path)?;

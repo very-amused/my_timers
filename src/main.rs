@@ -1,4 +1,4 @@
-use std::{error::Error, time::Duration};
+use std::{error::Error, time::Duration, sync};
 use chrono::{Timelike, Local};
 use tokio::{time, task::JoinSet, signal as tokio_signal};
 use tracing::{event, Level, span, Instrument, instrument};
@@ -54,6 +54,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	let sigterm = sigterm_channel.recv();
 	tokio::pin!(ctrl_c);
 	tokio::pin!(sigterm);
+
+	// Read events from config
+	let events = tokio::select! {
+		evts = events::parse(&args.events_path, pool.clone()) => evts.or_else(|err| {
+			eprintln!("Failed to parse {}:", &args.events_path);
+			Err(err)
+		})?,
+		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await,
+		Some(_) = &mut sigterm => return shutdown(None, pool).await
+	};
 
 	tokio::select! {
 		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await,
