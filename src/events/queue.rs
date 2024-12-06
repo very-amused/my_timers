@@ -45,7 +45,21 @@ impl EventTask<'_> {
 		let mut tx = pool.begin().await?;
 
 		// Run the event body
+		let mut i: usize = 0;
+		for stmt in &self.event.body {
+			let span = span!(Level::DEBUG, "Exec", stmt = i,  action = Event::action(stmt));
+			async {
+				let result = sqlx::query(stmt)
+					.execute(&mut *tx)
+					.await?;
+				event!(Level::DEBUG, "{} Rows affected", result.rows_affected());
+				Ok::<(), sqlx::Error>(())
+			}.instrument(span).await?;
+			i += 1;
+		}
 
+		tx.commit().await?;
+		event!(Level::INFO, "Done");
 		Ok(())
 	}
 }
