@@ -72,6 +72,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	// other threads when they run, which the execution task pulls from and executes in a synchronous
 	// fashion to minimize lock contention.
 	let event_queue = events::queue::EventQueue::new(&config.db.driver, events.len());
+	if let Some(mut rx) = event_queue.rx {
+		let pool = pool.clone();
+		event_threads.spawn(async move {
+			while let Some(evt) = rx.recv().await {
+				// Error logging is handled in the event's tracing span
+				evt.run(pool.clone()).await.ok();
+			}
+		});
+	}
 
 	// Immediately run @startup events
 	event!(Level::INFO, "Running @startup events");
@@ -120,7 +129,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 				let tx = event_queue.tx.clone();
 				let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
 				event_threads.spawn(async move {
-					// Error logging is handled in the event's tracing span
 					evt.run(pool, tx).await.ok();
 				});
 			}
@@ -262,6 +270,7 @@ async fn shutdown(event_threads: Option<JoinSet<()>>, pool: AnyPool) -> Result<(
 	event!(Level::INFO, "Shutting down");
 	if let Some(mut threads) = event_threads {
 		event!(Level::DEBUG, "Stopping event threads");
+		// NOTE: https://github.com/tokio-rs/tokio/discussions/5534#discussioncomment-5246892
 		threads.shutdown().await;
 	}
 	event!(Level::DEBUG, "Closing database pool");

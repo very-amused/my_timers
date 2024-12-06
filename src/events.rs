@@ -75,7 +75,7 @@ impl Event {
 	/// only committing the results if all statements succeed
 	#[instrument(skip_all, fields(event = %self, interval = %self.interval), err)]
 	pub async fn run<'e>(&'e self, pool: AnyPool, queue_tx: Option<mpsc::Sender<EventTask<'e>>>) -> Result<(), Box<dyn Error + 'e>> {
-		// Queue the event if needed (non-concurrent drivers such as sqlite)
+		// Queue the event instead of immediately running if needed (non-concurrent drivers such as sqlite)
 		if let Some(tx) = queue_tx {
 			event!(Level::INFO, "Queueing event");
 			tx.send(EventTask{

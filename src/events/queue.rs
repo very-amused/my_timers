@@ -1,6 +1,8 @@
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use chrono::{DateTime, Local};
-use std::cmp;
+use std::{cmp, error::Error};
+use sqlx::{AnyPool, Executor};
+use tracing::{instrument, event, Level, span, Instrument};
 use super::Event;
 
 /// A deferred event added to the global event queue.
@@ -28,5 +30,22 @@ impl EventQueue<'_> {
 			tx: Some(tx),
 			rx: Some(rx)
 		}
+	}
+}
+
+impl EventTask<'_> {
+	/// Equivalent to Event::run for an EventTask pulled from a queue.
+	/// Used with non-concurrent drivers.
+	#[instrument(skip_all, fields(event = %self.event, interval = %self.event.interval), err)]
+	pub async fn run(&self, pool: AnyPool) -> Result<(), Box<dyn Error>> {
+		// Start a transaction to run the event on
+		let queue_latency = (Local::now() - self.queued_at).to_std()?;
+		let queue_latency = format!("{:#?}", queue_latency);
+		event!(Level::INFO, queue_latency, "Running event");
+		let mut tx = pool.begin().await?;
+
+		// Run the event body
+
+		Ok(())
 	}
 }
