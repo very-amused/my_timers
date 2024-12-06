@@ -11,8 +11,41 @@ mod cron;
 mod args;
 mod signal;
 
-
 #[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+	// Parse CLI args
+	let args = args::args();
+
+	// Parse config
+	let config = config::parse(&args.config_path).or_else(|err| {
+		eprintln!("Failed to parse {}:", &args.config_path);
+		Err(err)
+	})?;
+
+
+	// Initialize logging destinations
+	let _guards = config.log.init(args.verbose);
+	event!(Level::INFO, "my_timers started");
+
+	// Connect to DB
+	let opts = config.db.mysql_opts();
+	let pool = mysql_async::Pool::new(opts);
+	{
+		let span = span!(Level::DEBUG, "Connecting to DB");
+		async {
+			event!(Level::DEBUG, "Connecting to database {}", config.db.pretty_name());
+			pool.get_conn().await?;
+			event!(Level::DEBUG, "Connected");
+			Ok::<(), mysql_async::Error>(())
+		}.instrument(span).await?;
+	}
+
+	Ok(())
+}
+
+// Old Main
+#[tokio::main]
+#[cfg(any())]
 async fn main() -> Result<(), Box<dyn Error>> {
 	// Parse CLI args
 	let args = args::args();
