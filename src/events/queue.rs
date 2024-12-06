@@ -1,5 +1,6 @@
 use tokio::sync::mpsc;
 use chrono::{DateTime, Local};
+use std::cmp;
 use super::Event;
 
 /// A deferred event added to the global event queue.
@@ -21,7 +22,7 @@ impl EventQueue<'_> {
 		}
 
 		// Create channel with the capacity to hold 5 minutes worth of worst-case event backlog
-		let (tx, rx) = mpsc::channel::<EventTask>(5 * n_events);
+		let (tx, rx) = mpsc::channel::<EventTask>(5 * cmp::max(n_events, 1));
 
 		EventQueue {
 			tx: Some(tx),
