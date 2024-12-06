@@ -1,6 +1,6 @@
 use std::{error::Error, time::Duration};
 use chrono::{Timelike, Local};
-use tokio::{time, task::JoinSet, signal as tokio_signal};
+use tokio::{time, task::JoinSet, signal as tokio_signal, sync::mpsc};
 use tracing::{event, Level, span, Instrument, instrument};
 use sqlx::AnyPool;
 
@@ -68,11 +68,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	// Initialize task joinset
 	let mut event_threads = JoinSet::<()>::new();
 
+	// Start serial event execution task if we're using sqlite. Events are placed in an MPSC queue by
+	// other threads when they run, which the execution task pulls from and executes in a synchronous
+	// fashion to minimize lock contention.
+	let event_queue = events::queue::EventQueue::new(&config.db.driver, events.len());
+
 	// Immediately run @startup events
 	event!(Level::INFO, "Running @startup events");
 	for evt in &events {
 		if evt.interval.startup {
 			let pool = pool.clone();
+			// These events are pinned and will NEVER be mutated once the event loop starts,
+			// which makes these references safe.
 			let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
 			event_threads.spawn(async move {
 				evt.run(pool).await.ok();
@@ -113,7 +120,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 				event_threads.spawn(async move {
 					// Error logging is handled in the event's tracing span
 					evt.run(pool).await.ok();
-				});	
+				});
 			}
 		}
 	}

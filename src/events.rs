@@ -6,6 +6,8 @@ use lazy_static::lazy_static;
 
 use crate::cron::{self, error::CronParseError};
 
+pub mod queue;
+
 
 #[derive(Debug)]
 pub enum EventParseError {

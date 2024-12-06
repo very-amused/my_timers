@@ -63,11 +63,6 @@ impl Config {
 			}
 		}
 
-		// TODO: serialize sqlite writes
-		if self.driver == "sqlite" {
-			return Err(DBConfigError::InvalidDriver(self.driver.clone()));
-		}
-
 		Ok(())
 	}
 
