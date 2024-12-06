@@ -78,11 +78,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	for evt in &events {
 		if evt.interval.startup {
 			let pool = pool.clone();
+			let tx = event_queue.tx.clone();
 			// These events are pinned and will NEVER be mutated once the event loop starts,
 			// which makes these references safe.
 			let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
 			event_threads.spawn(async move {
-				evt.run(pool).await.ok();
+				evt.run(pool, tx).await.ok();
 			});
 		}
 	}
@@ -116,10 +117,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		for evt in &events {
 			if evt.interval.match_time(&now) {
 				let pool = pool.clone();
+				let tx = event_queue.tx.clone();
 				let evt = unsafe { (&**evt as *const events::Event).as_ref() }.unwrap();
 				event_threads.spawn(async move {
 					// Error logging is handled in the event's tracing span
-					evt.run(pool).await.ok();
+					evt.run(pool, tx).await.ok();
 				});
 			}
 		}

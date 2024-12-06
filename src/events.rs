@@ -2,9 +2,12 @@ use std::{error::Error, fs::File, io::{BufReader, BufRead}, collections::{VecDeq
 
 use sqlx::{AnyPool, Executor};
 use tracing::{instrument, event, Level, span, Instrument};
+use tokio::sync::mpsc;
+use chrono::Local;
 use lazy_static::lazy_static;
 
 use crate::cron::{self, error::CronParseError};
+use self::queue::EventTask;
 
 pub mod queue;
 
@@ -71,7 +74,17 @@ impl Event {
 	/// Run an event's SQL body on a transaction,
 	/// only committing the results if all statements succeed
 	#[instrument(skip_all, fields(event = %self, interval = %self.interval), err)]
-	pub async fn run(&self, pool: AnyPool) -> Result<(), sqlx::Error> {
+	pub async fn run<'e>(&'e self, pool: AnyPool, queue_tx: Option<mpsc::Sender<EventTask<'e>>>) -> Result<(), Box<dyn Error + 'e>> {
+		// Queue the event if needed (non-concurrent drivers such as sqlite)
+		if let Some(tx) = queue_tx {
+			event!(Level::INFO, "Queueing event");
+			tx.send(EventTask{
+				event: self,
+				queued_at: Local::now()
+			}).await?;
+			return Ok(());
+		}
+
 		// Start a transaction to run the event on
 		event!(Level::INFO, "Running event");
 		let mut tx = pool.begin().await?;
