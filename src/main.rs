@@ -2,6 +2,7 @@ use std::{error::Error, time::Duration};
 use chrono::{Timelike, Local};
 use tokio::{time, task::JoinSet, signal as tokio_signal};
 use tracing::{event, Level, span, Instrument, instrument};
+use sqlx::{Pool, AnyPool};
 
 mod config;
 mod db;
@@ -28,19 +29,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	event!(Level::INFO, "my_timers started");
 
 	// Connect to DB
-	let opts = config.db.mysql_opts();
-	let pool = mysql_async::Pool::new(opts);
-	{
+	sqlx::any::install_default_drivers();
+	let db_url = config.db.sqlx_url()?;
+	let pool = {
 		let span = span!(Level::DEBUG, "Connecting to DB");
 		async {
 			event!(Level::DEBUG, "Connecting to database {}", config.db.pretty_name());
-			pool.get_conn().await?;
+			let pool_opts = sqlx::any::AnyPoolOptions::new()
+				.max_connections(10);
+			let pool = pool_opts.connect(&db_url).await;
 			event!(Level::DEBUG, "Connected");
-			Ok::<(), mysql_async::Error>(())
-		}.instrument(span).await?;
-	}
+			pool
+		}.instrument(span).await?
+	};
 
-	Ok(())
+	// Listen for ctrl+c/SIGINT to safely shutdown.
+	// tokio::select! must be used to catch signals for all future awaits
+	// on the main thread
+	let ctrl_c = tokio_signal::ctrl_c();
+	let mut sigterm_channel = signal::new(signal::SignalKind::SIGTERM).or_else(|err| {
+		eprintln!("Failed to create SIGTERM channel");
+		Err(err)
+	})?;
+	let sigterm = sigterm_channel.recv();
+	tokio::pin!(ctrl_c);
+	tokio::pin!(sigterm);
+
+	tokio::select! {
+		Ok(_) = &mut ctrl_c => return shutdown(None, pool).await,
+		Some(_) = &mut sigterm => return shutdown(None, pool).await
+	}
 }
 
 // Old Main
@@ -173,14 +191,14 @@ fn to_next_minute() -> Duration {
 
 /// Safely shutdown the main thread
 #[instrument(name = "Shutting down", skip_all, err)]
-async fn shutdown(event_threads: Option<JoinSet<()>>, pool: mysql_async::Pool) -> Result<(), Box<dyn Error>> {
+async fn shutdown(event_threads: Option<JoinSet<()>>, pool: AnyPool) -> Result<(), Box<dyn Error>> {
 	event!(Level::INFO, "Shutting down");
 	if let Some(mut threads) = event_threads {
 		event!(Level::DEBUG, "Stopping event threads");
 		threads.shutdown().await;
 	}
-	event!(Level::DEBUG, "Disconnecting from database");
-	pool.disconnect().await?;
+	event!(Level::DEBUG, "Closing database pool");
+	pool.close().await;
 	event!(Level::INFO, "Done");
 	Ok(())
 }

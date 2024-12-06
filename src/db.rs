@@ -1,7 +1,8 @@
 use mysql_async;
 use serde::Deserialize;
 use self::error::DBConfigError;
-use std::collections::HashSet;
+use sqlx::{mysql, postgres, sqlite, ConnectOptions};
+use std::{collections::HashSet, str::FromStr};
 use lazy_static::lazy_static;
 
 pub mod error;
@@ -44,10 +45,58 @@ impl Config {
 			return Err(DBConfigError::InvalidProtocol(self.protocol.clone()))
 		}
 
-		if self.driver != "sqlite" {
-		}
-
 		Ok(())
+	}
+
+	/// Return an sqlx-compatible DB connection URL
+	pub fn sqlx_url(&self) -> Result<String, DBConfigError> {
+		match self.driver.as_str() {
+			"mariadb" | "mysql" => {
+				let mut opts = mysql::MySqlConnectOptions::new()
+					.username(&self.user)
+					.password(&self.password)
+					.database(&self.database);
+				// TODO v0.3.1: parse (but don't verify) events before connecting to DB,
+				// set statement-cache-capacity such that all queries in events.conf are cached
+				if self.protocol == "SOCKET" {
+					opts = opts.socket(&self.address);
+				} else {
+					opts = opts.host(&self.address);
+				}
+				if self.tls {
+					// TODO: implement tls option for VerifyCA
+					opts = opts.ssl_mode(mysql::MySqlSslMode::Required);
+				}
+				Ok(opts.to_url_lossy().into())
+			},
+			"postgres" => {
+				let mut opts = postgres::PgConnectOptions::new()
+					.host(&self.address) // Automatically interpreted as a Unix socket if it
+																								// starts with a slash
+					.username(&self.user)
+					.password(&self.password)
+					.database(&self.database);
+				if self.tls {
+					opts = opts.ssl_mode(postgres::PgSslMode::Require);
+				}
+				Ok(opts.to_url_lossy().into())
+			},
+			"sqlite" => {
+				let opts = sqlite::SqliteConnectOptions::new()
+					.filename(&self.address)
+					.foreign_keys(true) // sqlx default, but you can never be too safe
+					// WAL journaling allows unlimited readers and 1 writer at a given time.
+					// This setting is applied to other programs accessing the same DB.
+					// Mandatory WAL is 1/2 of what we can do to minimize SQLITE_BUSY
+					// locking failures:
+					// 1. Ensure reads from my_timers and all other programs never contend (WAL)
+					// 2. Ensure writes from my_timers never contend with each other (serialize w/ MPSC)
+					.journal_mode(sqlite::SqliteJournalMode::Wal);
+
+					Ok(opts.to_url_lossy().into())
+			},
+			_ => Err(DBConfigError::InvalidDriver(self.driver.clone()))
+		}
 	}
 
 	#[deprecated]
