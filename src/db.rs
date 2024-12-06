@@ -120,7 +120,9 @@ impl Config {
 	// Print-friendly identifier containing protocol, address, database, and tls options
 	pub fn pretty_name(&self) -> String {
 		// Format here is inspired by mysql DSNs
-		if self.protocol == "SOCKET" {
+		if self.driver == "sqlite" {
+			self.address.clone()
+		} else if self.protocol == "SOCKET" {
 			format!("{} via unix socket", self.database)
 		} else {
 			format!("{}/{} via {} (tls {})", self.address, self.database, self.protocol, if self.tls { "enabled" } else { "disabled" })

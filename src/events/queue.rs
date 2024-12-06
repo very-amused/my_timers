@@ -1,7 +1,7 @@
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use chrono::{DateTime, Local};
 use std::{cmp, error::Error};
-use sqlx::{AnyPool, Executor};
+use sqlx::AnyPool;
 use tracing::{instrument, event, Level, span, Instrument};
 use super::Event;
 
