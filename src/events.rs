@@ -7,10 +7,9 @@ use chrono::Local;
 use lazy_static::lazy_static;
 
 use crate::cron::{self, error::CronParseError};
-use self::queue::EventTask;
 
-pub mod queue;
-
+mod queue;
+pub use queue::{EventTask, EventQueue};
 
 #[derive(Debug)]
 pub enum EventParseError {

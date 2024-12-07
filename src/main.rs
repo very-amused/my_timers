@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	// Start serial event execution task if we're using sqlite. Events are placed in an MPSC queue by
 	// other threads when they run, which the execution task pulls from and executes in a synchronous
 	// fashion to minimize lock contention.
-	let event_queue = events::queue::EventQueue::new(&config.db.driver, events.len());
+	let event_queue = events::EventQueue::new(&config.db.driver, events.len());
 	if let Some(mut rx) = event_queue.rx {
 		let pool = pool.clone();
 		event_threads.spawn(async move {
