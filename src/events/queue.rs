@@ -39,9 +39,8 @@ impl EventTask<'_> {
 	#[instrument(skip_all, fields(event = %self.event, interval = %self.event.interval), err)]
 	pub async fn run(&self, pool: AnyPool) -> Result<(), Box<dyn Error>> {
 		// Start a transaction to run the event on
-		let queue_latency = (Local::now() - self.queued_at).to_std()?;
-		let queue_latency = format!("{:#?}", queue_latency);
-		event!(Level::INFO, queue_latency, "Running event");
+		let time_in_queue = (Local::now() - self.queued_at).to_std()?;
+		event!(Level::INFO, time_in_queue = format!("{:#?}", time_in_queue), "Running event");
 		let mut tx = pool.begin().await?;
 
 		// Run the event body
