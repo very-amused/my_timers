@@ -91,13 +91,14 @@ while `log` configures how my_timers records event runs via logs/traces.
       // (optional, default: true)
       "enabled": true,
 
-			// Log output format
-			// (optional, values: "default", "pretty", "compact", "json", default: "pretty")
-			"format": "default",
 
-			// Colorized logging output using ANSI escape codes.
-			// (optional, default: false)
-			"color": false,
+      // Log output format
+      // (optional, values: "default", "pretty", "compact", "json", default: "pretty")
+      "format": "default",
+
+      // Colorized logging output using ANSI escape codes.
+      // (optional, default: false)
+      "color": false,
 
       // The output stream logs will be written to
       // (optional, values: "stdout"|"stderr", default: "stdout")
