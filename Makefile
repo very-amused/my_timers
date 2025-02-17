@@ -5,12 +5,15 @@
 rustflags=--release --quiet --message-format json
 rsync-flags=-h --size-only --info=progress2
 src=src build.rs Cargo.toml Cargo.lock .cargo installer
-targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd x86_64-pc-windows-msvc
+#targets=x86_64-unknown-linux-gnu x86_64-unknown-linux-musl x86_64-unknown-freebsd x86_64-pc-windows-msvc
+targets=x86_64-unknown-linux-gnu x86_64-unknown-freebsd
 prefix=sed -e 's/^/\x1b[1m[$@]\x1b[0m /'
 releasename=`echo $@ | sed 's/-unknown//; s/-gnu//'`
 bin-ext=`case $@ in *pc-windows*) echo '.exe' ;; esac`
 display-version=$(shell grep DISPLAY_VERSION installer/version.nsh | awk '{print $$3}')
-vms=freebsd-cc void-cc win10-ltsc
+# Some targets are currently disabled until I re-deploy VMs
+#vms=freebsd-cc void-cc win10-ltsc
+vms=freebsd-cc
 git-hash=installer/git-hash
 $(shell git rev-parse --short HEAD > $(git-hash))
 $(shell echo $(@))
@@ -76,7 +79,8 @@ endef
 all: clean .WAIT $(targets)
 .PHONY: all
 
-release: clean-all .WAIT all .WAIT nsis-signed
+#release: clean-all .WAIT all .WAIT nsis-signed
+release: clean-all .WAIT all
 
 install: my_timers README.md LICENSE
 	install -d $(DESTDIR)$(PREFIX)/bin
